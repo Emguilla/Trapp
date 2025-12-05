@@ -1,4 +1,4 @@
-function POSCAR=readPOSCAR(filename,varargin)
+function POSCAR=readPOSCAR(filename)
 %==================================================================================================================================%
 % readPOSCAR.m: Read of a POSCAR file from VASP and creation of a POSCAR structure file in MatLab (v0.5)
 %==================================================================================================================================%
@@ -17,23 +17,14 @@ function POSCAR=readPOSCAR(filename,varargin)
 %       contrib: EYG
 %   version 0.5 (10/09/2025) - Modification of the reading loop for XDATCAR to automatically accomodate for POSCAR or XDATCAR. The
 %       author: EYG             optional argument 'XDATCAR' has thus been removed.
+%   version 0.5.1 (05/12/2025) - Removal of the vestigial bit that handle varargin and removal of varargin as an input
+%       author: EYG
 %==================================================================================================================================%
 % args:
 %   filename:   path + name of the file to be read as a POSCAR (works for CONTCAR and XDATCAR as well)
 %==================================================================================================================================%
 % Initialisation of the default parameters
 readmultiple=true;
-stopread=false;
-% Reading of the optional argument
-if exist('varargin','var')
-    for p=1:2:length(varargin)
-        switch lower(varargin{p})
-            case 'xdatcar'
-                readmultiple=varargin{p+1};
-                readsingle=~readmultiple;
-        end
-    end
-end
 
 % load periodic table to add masses to POSCAR structures
 load('constant_fund.mat','ptable');

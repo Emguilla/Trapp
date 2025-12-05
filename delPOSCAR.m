@@ -1,6 +1,6 @@
 function POSCAR=delPOSCAR(POSCAR,k)
 %==================================================================================================================================%
-% delPOSCAR.m:  Deletion of atoms #k in a POSCAR structure (v0.3)
+% delPOSCAR.m:  Deletion of atoms #k in a POSCAR structure (v0.3.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (20/08/2025) - Creation
@@ -9,6 +9,8 @@ function POSCAR=delPOSCAR(POSCAR,k)
 %       author: EYG
 %   version 0.3 (25/09/2025) - Modification of the n_chemicals removal to include the possibility to have an empty POSCAR structure
 %       author: EYG             + Add the removal of the constraint field of the POSCAR structure
+%   version 0.3.1 (29/11/2025) - Correction of a bug related to the removal of the constraint field when selective dynamics are not
+%       contrib: EYG             enabled
 %==================================================================================================================================%
 % args:
 %   POSCAR: POSCAR structure
@@ -41,5 +43,7 @@ POSCAR.symbols(k)=[];
 POSCAR.xred(k,:)=[];
 POSCAR.mass(k)=[];
 POSCAR.Z(k)=[];
-POSCAR.constraint(k,:)=[];
+if ~isnan(POSCAR.constraint)
+    POSCAR.constraint(k,:)=[];
+end
 end

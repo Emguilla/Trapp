@@ -1,7 +1,7 @@
 function frames=ReactionRendering(R_in,aLim,bLim,cLim,varargin)
 %==================================================================================================================================%
 % ReactionRendering.m:  Render an animated or static 3D model of an atomic structure, with or without the corresponding energy 
-%                       profile (v0.3.1)
+%                       profile (v0.3.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (28/08/2025) - Creation
@@ -14,12 +14,15 @@ function frames=ReactionRendering(R_in,aLim,bLim,cLim,varargin)
 %   version 0.3 (03/09/2025) - Add the possibility to render the lattice vector
 %       author: EYG
 %   version 0.3.1 (10/09/2025) - Add an auto-updating information line information as a sort of progression bar, and also the
-%                                   background color of the figure is set to white
+%       contrib: EYG                background color of the figure is set to white
+%   version 0.3.2 (26/11/2025) - The background is now set to white only when the file is saved. Otherwise, grey background.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   R_in:               Array of reaction structures (or POSCAR structures)
 %   aLim, bLim, cLim:   Limits of the structure (in direct coordinates) along the a, b and c vectors
-%   opt. args:          'save_data', followed by the playing direction of the GIF. Possible choices are 'Fwd', 'Bwd', 'Round', 'Infinite' 
+%   opt. args:          'save_data', followed by the playing direction of the GIF. Possible choices are 'Fwd', 'Bwd', 'Round' or 
+%                           'Infinite' 
 %                           (default: nothing is saved)
 %                       'static', followed by true or false to request a static rendering.
 %                           (default: false)
@@ -61,14 +64,22 @@ if ~isfield(R_in,'POSCAR')
     POSCARs=R_in;
     EnergyProfile=false;
     n_images=length(POSCARs);
-    figure('color','white')
+    if save_data
+        figure('color','white')
+    else
+        figure;
+    end
 else
     POSCARs=R_in(end).CONTCAR;
     E0=R_in(1).energies(1,end);
     n_images=length(R_in(end).POSCAR);
     n_dataset=length(R_in)-1;
     % plot the static part of the energy profile only once at the beginning
-    figure('Position', [200 120 1200 425],'color','white')
+    if save_data
+        figure('Position', [200 120 1200 425],'color','white')
+    else
+        figure('Position', [200 120 1200 425])
+    end
     subplot(1,2,2);
     plot(R_in(1).reaction_coordinates(:,end),R_in(1).energies(:,end)-E0,'.-','LineWidth',3,'color',lcolor(1,:),'MarkerSize',20,'MarkerFaceColor',lcolor(2,:),'MarkerEdgeColor',lcolor(2,:))
     hold on

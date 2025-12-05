@@ -26,13 +26,16 @@ path='./';
 % end
 
 EFermi=NaN;
-HS=[0.00000  0.00000  0.00000;%! Gamma-point
-0.50000  0.00000  0.50000;%! X-point
-0.50000  0.25000  0.75000;%! W-point
-0.50000  0.50000  0.50000;%! L-point
-0.37500  0.37500  0.75000;%! K-point
-0.62500  0.25000  0.62500];%! U-point
-HS_name={'\Gamma','X','W','L','K','U'};
+
+% Face-centered cubic
+%! Gamma-point %! X-point %! W-point %! L-point %! K-point %! U-point
+% HS=[0 0 0; 3/8 3/8 3/4; 1/2 1/2 1/2; 5/8  1/4 5/8; 1/2 1/4 3/4; 1/2 0 1/2];
+% HS_name={'\Gamma','K','L','U','W','X'};
+% Hexagonal
+%! Gamma-point %! L-point %! M-point
+HS=[0 0 0;1/3 1/3 0;1/2 0 0];
+HS_name={'\Gamma','K','M'};
+
 if strcmpi(mode,'bandstructure')
     fid=fopen([path,filename],'r');
     fgetl(fid);
@@ -52,7 +55,7 @@ if strcmpi(mode,'bandstructure')
             E(p,q)=Data{2};
             Occ(p,q)=Data{3};
         end
-        EFermi=max([max(E(p,:).*Occ(p,:)) EFermi]);
+        EFermi=max([max(E(p,:).*(Occ(p,:)>0.5)) EFermi]); % def foireuse
     end
 end
 
@@ -62,72 +65,60 @@ HS_idx=[];
 is_HS=zeros(nkpts,1);
 for p=1:nkpts
     for q=1:length(HS(:,1))
-        if norm(k(p,:)-HS(q,:))<2*eps
+        if norm(k(p,:)-HS(q,:))<1e-3
             is_HS(p)=true;
-            HS_str=[HS_str,HS_name{q}];
-            if p~=nkpts
-                if norm(k(p+1,:)-k(p,:))<2*eps
-                    idx_rm=[idx_rm p];
-                    HS_str(end)=[];
-                end
-            end
+            HS_str={HS_str{:},HS_name{q}};
         end
     end
 end
+
+HS_discontinuity=zeros(length(HS_str)/2+1);
+HS_label{1}=HS_str{1};
+for p=2:2:length(HS_str)-1
+    if strcmpi(HS_str{p+1},HS_str{p})
+        HS_label{p/2+1}=HS_str{p};
+    else
+        HS_label{p/2+1}=[HS_str{p},'/',HS_str{p+1}];
+        HS_discontinuity(p/2+1)=true;
+    end
+end
+HS_label{end+1}=HS_str{end};
+
+BZ_int=reshape(find(is_HS),2,length(find(is_HS))/2)';
+n_int=length(BZ_int(:,1));
+for p=1:n_int
+    for q=BZ_int(p,1):BZ_int(p,2)
+        dk_int{p}(q-BZ_int(p,1)+1)=norm(k(q,:)-k(BZ_int(p,1),:));
+    end
+    deltak(p)=dk_int{p}(end);
+    dk_int{p}=dk_int{p};
+end
+kx=[0 dk_int{1}(2:end)];
+for p=2:n_int
+    kx=[kx sum(deltak(1:p-1))+dk_int{p}(2:end)];
+end
+idx_rm=find(is_HS(2:end).*is_HS(1:end-1));
 k(idx_rm,:)=[];
 E(idx_rm,:)=[];
 Occ(idx_rm,:)=[];
 is_HS(idx_rm)=[];
-HS_idx=find(is_HS);
-idx_break=find(is_HS(1:end-1).*is_HS(2:end));
-nkx=1;
-kx(1)=0;
-for p=1:length(HS_idx)-1
-    deltak(p)=norm(k(HS_idx(p+1),:)-k(HS_idx(p),:));
-    for q=HS_idx(p)+1:HS_idx(p+1)
-        nkx=nkx+1;
-        kx(nkx)=kx(HS_idx(p))+(norm(k(q,:)-k(HS_idx(p),:)))*deltak(p);
+
+
+plot(kx,E-EFermi,'k')
+xlim([min(kx) max(kx)])
+yl=ylim;
+hold on
+kx_HS=kx(find(is_HS));
+for p=2:length(kx_HS)-1
+    if HS_discontinuity(p)
+        h=plot([kx_HS(p) kx_HS(p)],[yl(1) yl(2)],'--','color',[1 1 1]*0.75);
+        uistack(h,'bottom');
+    else
+        h=plot([kx_HS(p) kx_HS(p)],[yl(1) yl(2)],'color',[1 1 1]*0.75);
+        uistack(h,'bottom');
     end
 end
-% 
-% if N_ZBI_HSkpts<2
-%     N_ZBI_HSkpts=Nkpoints;
-%     ZBI_HSkpts_POS=1:Nkpoints;
-%     ZBI_HSkpts_VAL=k;
-% end
-% 
-% for p=1:N_ZBI_HSkpts-1
-%     Nk_segments(p)=ZBI_HSkpts_POS(p+1)-ZBI_HSkpts_POS(p);
-% end
-% 
-% intervalles=zeros(length(ZBI_HSkpts_VAL(:,1))-1,1);
-% sum_intervalles=zeros(length(ZBI_HSkpts_VAL(:,1)),1);
-% for p=1:length(ZBI_HSkpts_VAL(:,1))-1
-%     intervalles(p)=norm(ZBI_HSkpts_VAL(p+1,:)-ZBI_HSkpts_VAL(p,:));
-%     sum_intervalles(p+1)=sum(intervalles(1:p));
-% end
-% norm_intervalles=intervalles/sum(intervalles);
-% sum_intervalles=sum_intervalles/sum(intervalles);
-% 
-% i=0;
-% for p=1:length(ZBI_HSkpts_VAL(:,1))-1
-%     for q=1:Nk_segments(p)
-%         i=i+1;
-%         kx=sum_intervalles(p)+(norm(ZBI_HSkpts_VAL(p,:)-k(i,:))/norm(ZBI_HSkpts_VAL(p+1,:)-ZBI_HSkpts_VAL(p,:)))*norm_intervalles(p);
-%         kpts2x(i)=kx;
-%     end
-% end
-% 
-% %figure('Position', [200 120 150 425])
-% for p=1:nbands
-%     plot(kpts2x,E(:,p),'k')
-% end
-% xticklabels(ZBI_HSkpts_NAME)
-% 
-% hold on
-% for p=2:N_ZBI_HSkpts-1
-%     plot(sum_intervalles(p)*ones(2,1)-1,[min(min(E))-50 max(max(E))+50],'k-.','color',[0.75 0.75 0.75])
-% end
-% ylim([min(min(E)) max(max(E))])
-% ylim([-25 20])
-% set(gca,'fontsize',12,'fontname','cambria math')
+xticks(kx_HS)
+xticklabels(HS_label);
+set(gca,'fontsize',12,'fontname','cambria math')
+

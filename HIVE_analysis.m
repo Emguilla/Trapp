@@ -72,8 +72,7 @@ end
 setenv('PATH',new_path);
 %==================================================================================================================================%
 % Type the following command (in your WSL installation) to allow any program to mount a drive without password privilege
-% THIS IS A RISKY PROCEDURE, PROCEED WITH CAUTION !!!
-% DO NOT PRECEDE THE FOLLOWING WITH SUDO !
+% THIS IS A RISKY PROCEDURE, PROCEED WITH CAUTION !!! AND DO NOT PRECEDE THE FOLLOWING WITH SUDO !
 % echo "`whoami` ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/`whoami` && sudo chmod 0440 /etc/sudoers.d/`whoami`
 %==================================================================================================================================%
 cd(path)

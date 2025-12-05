@@ -1,6 +1,6 @@
 function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %==================================================================================================================================%
-% molecule3D.m: Draw 3D molecules (v2.0.3) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
+% molecule3D.m: Draw 3D molecules (v2.0.4) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
 %               (https://www.mathworks.com/matlabcentral/fileexchange/55231-molecule3d). Retrieved December 3, 2020.
 %==================================================================================================================================%
 % Version history:
@@ -20,7 +20,12 @@ function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %                                   Z that are present in the "Z" field of the POSCAR structure, instead of all atomic number 
 %                                   (ranging from 1 to 118).
 %   version 2.0.3 (24/09/2025) - Modification of the x/y/zlim in the case of non-periodical rendering IF there is no lattice vector
-%                                   displayed: the limits are set to the extreme positions of the atoms in the POSCAR structure.
+%       contrib: EYG                displayed: the limits are set to the extreme positions of the atoms in the POSCAR structure.
+%   version 2.0.4 (29/11/2025) - Add bond length of Si, Ca, Pb and S and their colour according to the Jmol CPK convention. In
+%       contrib: EYG                addition, the x/y/zlim are now set by the vertices of the lattices, or the extremes atoms
+%                                   positions when requesting to display the lattice vectors.
+%   version 2.1 (02-12-2025) - Add vdW bonding to the rendering, but only between O and H atoms, when the distance is above the OH
+%       author: EYG            distance for covalent bonding and below the maximum van der Waals bond distance set to 2 Angstrom
 %==================================================================================================================================%
 % args:
 %   POSCAR:             POSCAR structure, or path+filename of a POSCAR file
@@ -68,11 +73,13 @@ DBOND(5,6)=1.7;DBOND(5,7)=1.6;
 % Carbon
 DBOND(6,6)=1.8;DBOND(6,7)=1.7;DBOND(6,8)=1.8;DBOND(6,15)=1.7;DBOND(6,17)=1.8;
 % Oxygen
-DBOND(8,8)=1.5;DBOND(8,22)=2.5;
+DBOND(8,8)=1.5;DBOND(8,14)=2.6;DBOND(8,16)=1.8;DBOND(8,20)=2.6;DBOND(8,22)=2.6;
 % Sodium
 DBOND(11,11)=4;DBOND(11,17)=3;
+% Silicon
+DBOND(14,14)=2.6;
 % Sulfur
-DBOND(16,42)=2.7;
+DBOND(16,42)=2.7;DBOND(16,82)=3.4;
 % Titanium
 DBOND(22,22)=2.5;
 % Molybdenum
@@ -80,6 +87,8 @@ DBOND(42,42)=2.7;
 
 % Set maximum bond distance 
 DBOND_MAX=max(DBOND(:)); 
+% Set maximum van der Waals bond distance between O and H
+DBOND_vdW_OH_MAX=2;
 
 % For practicality, make the distance matrix symetrical
 for p=1:118
@@ -103,12 +112,13 @@ atcol(9,:)=[0.2 0.9 0.2];
 atcol(10,:)=atcol(2,:);
 atcol(11,:)=atcol(3,:);
 atcol(12,:)=atcol(4,:);
+atcol(14,:)=[240 200 160]/255;
 atcol(15,:)=[1.0 0.6 0.2];
 atcol(16,:)=[0.9 0.9 0.2];
 atcol(17,:)=atcol(9,:);
 atcol(18,:)=atcol(2,:);
 atcol(19,:)=atcol(3,:);
-atcol(20,:)=atcol(4,:);
+atcol(20,:)=[0.7 0.7 0.7];
 atcol(22,:)=[0.6 0.6 0.6];
 atcol(26,:)=[0.9 0.5 0.1];
 atcol(35,:)=[0.6 0.1 0.1];
@@ -120,24 +130,27 @@ atcol(53,:)=[0.4 0.1 0.7];
 atcol(54,:)=atcol(2,:);
 atcol(55,:)=atcol(3,:);
 atcol(56,:)=atcol(4,:);
+atcol(82,:)=[87,89,97]/255;
 atcol(88,:)=atcol(4,:);
 
 % Set radius of atoms, considering either the van der Waals or covalent radius
 covrad=ones(118,1)*0.5;
 covrad(1)=0.2;
-covrad(6)=0.3;
-covrad(8)=0.35;
-covrad(7)=0.4;
-covrad(53)=0.6;
 covrad(5)=0.3;
-covrad(42)=0.4;
-covrad(16)=0.3;
+covrad(6)=0.3;
+covrad(7)=0.4;
+covrad(8)=0.35;
 covrad(11)=0.25;
+covrad(16)=0.3;
 covrad(17)=0.4;
+covrad(20)=0.5;
+covrad(42)=0.4;
+covrad(53)=0.6;
 vdwrad=ones(118,1)*1.8;
 vdwrad(1)=1.2;
 vdwrad(6)=1.7;
 vdwrad(8)=1.52;
+vdwrad(16)=1.52;
 %==================================================================================================================================%
 % Handling of the mandatory parameters
 %==================================================================================================================================%
@@ -292,6 +305,7 @@ ks=find(ds<DBOND_MAX)';
 % Browsing through the list, check the symbols and keep the pair only if the distance is lower than the one defined in the DBOND
 % matrix.
 k=1;
+kv=1;
 for p_ks=1:length(ks)
     for pZ=unique(POSCAR.Z)
         for qZ=unique(POSCAR.Z)
@@ -299,6 +313,9 @@ for p_ks=1:length(ks)
                 if ds(ks(p_ks))<DBOND(pZ,qZ)
                     ks_n(k)=ks(p_ks);
                     k=k+1;
+                elseif ((pZ==1&&qZ==8)||(pZ==8&&qZ==1))&&ds(ks(p_ks))<DBOND_vdW_OH_MAX
+                    ksv_n(kv)=ks(p_ks);
+                    kv=kv+1;
                 end
             end
         end
@@ -308,6 +325,9 @@ if isempty(pairs)
     warning('No atom pair detected below the DBOND thresholds ! Check lattice parameter !')
 else
     ks=ks_n;
+    if exist('ksv_n','var')
+        kv=ksv_n;
+    end
 end
 %==================================================================================================================================%
 % Drawing of the spheres and cylinders
@@ -321,12 +341,16 @@ for k = 1:size(xyz,1)
     switch lower(style)
         case {'ballstick','covalent'}
             radii(k)=covrad(POSCAR.Z(k));
+            offset=0.5;
         case 'licorice'
             radii(k)=RC;
+            offset=0.2;
         case 'vdw'
             radii(k)=vdwrad(POSCAR.Z(k));
+            offset=2;
         case 'large'
             radii(k)=2*covrad(POSCAR.Z(k));
+            offset=1;
         otherwise 
             warning('unknown style --> ballstick will be used')
     end
@@ -367,6 +391,13 @@ for p_ks=ks
         surface(cylx,cyly,cylz,'FaceColor',atcol(POSCAR.Z(pairs(p_ks,p)),:),'EdgeColor','none','FaceLighting','gouraud')
     end
 end
+if exist('ksv_n','var')
+    for p_ks=kv
+        pos(1,:)=xyz(pairs(p_ks,1),:); % coordinates atom 1
+        pos(2,:)=xyz(pairs(p_ks,2),:); % coordinates atom 2
+        line([pos(1,1) pos(2,1)],[pos(1,2) pos(2,2)],[pos(1,3) pos(2,3)],'LineStyle','--','color',[0.5 0.5 0.5])
+    end
+end
 %==================================================================================================================================%
 % Polishing and finishing
 %==================================================================================================================================%
@@ -377,40 +408,44 @@ ZLim(1)=[aLim(1) bLim(1) cLim(1)]*POSCAR(1).vec(:,3);
 XLim(2)=[aLim(2) bLim(2) cLim(2)]*POSCAR(1).vec(:,1);
 YLim(2)=[aLim(2) bLim(2) cLim(2)]*POSCAR(1).vec(:,2);
 ZLim(2)=[aLim(2) bLim(2) cLim(2)]*POSCAR(1).vec(:,3);
-% There is an offset of 0.5Å in all direction to display the full sphere, even when the atom is on the boundary
-xlim([min([min(xyz(:,1)) XLim(1)]) max([max(xyz(:,1)) XLim(2)])]+[-0.5 0.5])
-ylim([min([min(xyz(:,2)) YLim(1)]) max([max(xyz(:,2)) YLim(2)])]+[-0.5 0.5])
-zlim([min([min(xyz(:,3)) ZLim(1)]) max([max(xyz(:,3)) ZLim(2)])]+[-0.5 0.5])
+% There is an offset of 0.2 to 1 Å (depending on the rendering style) in all direction to display the full sphere, even when the 
+% atom is on the boundary
+xlim([min([min(xyz(:,1)) XLim(1)]) max([max(xyz(:,1)) XLim(2)])]+[-1 1]*offset)
+ylim([min([min(xyz(:,2)) YLim(1)]) max([max(xyz(:,2)) YLim(2)])]+[-1 1]*offset)
+zlim([min([min(xyz(:,3)) ZLim(1)]) max([max(xyz(:,3)) ZLim(2)])]+[-1 1]*offset)
 if ~periodic&&~lattice_vec3D&&~lattice_vec2D
-    xlim([min(xyz(:,1)) max(xyz(:,1))]+[-0.5 0.5])
-    ylim([min(xyz(:,2)) max(xyz(:,2))]+[-0.5 0.5])
-    zlim([min(xyz(:,3)) max(xyz(:,3))]+[-0.5 0.5])
+    xlim([min(xyz(:,1)) max(xyz(:,1))]+[-1 1]*offset)
+    ylim([min(xyz(:,2)) max(xyz(:,2))]+[-1 1]*offset)
+    zlim([min(xyz(:,3)) max(xyz(:,3))]+[-1 1]*offset)
 end
 % Draw the unit cell if the lattice_vec parameter is set.
 if lattice_vec3D
     a=POSCAR.vec(1,:);
     b=POSCAR.vec(2,:);
     c=POSCAR.vec(3,:);
-    line([        0           a(1)],[        0           a(2)],[        0           a(3)],'color',[1 1 1]*0.25,'LineWidth',1.5)
-    line([        0           b(1)],[        0           b(2)],[        0           b(3)],'color',[1 1 1]*0.25,'LineWidth',1.5)
-    line([        0           c(1)],[        0           c(2)],[        0           c(3)],'color',[1 1 1]*0.25,'LineWidth',1.5)
-    line([     a(1)      a(1)+b(1)],[     a(2)      a(2)+b(2)],[     a(3)      a(3)+b(3)],'color',[1 1 1]*0.25,'LineWidth',1.5)
-    line([     a(1)      a(1)+c(1)],[     a(2)      a(2)+c(2)],[     a(3)      a(3)+c(3)],'color',[1 1 1]*0.25,'LineWidth',1.5)
-    line([     b(1)      a(1)+b(1)],[     b(2)      a(2)+b(2)],[     b(3)      a(3)+b(3)],'color',[1 1 1]*0.25,'LineWidth',1.5)
-    line([     b(1)      b(1)+c(1)],[     b(2)      b(2)+c(2)],[     b(3)      b(3)+c(3)],'color',[1 1 1]*0.25,'LineWidth',1.5)
-    line([     c(1)      a(1)+c(1)],[     c(2)      a(2)+c(2)],[     c(3)      a(3)+c(3)],'color',[1 1 1]*0.25,'LineWidth',1.5)
-    line([     c(1)      b(1)+c(1)],[     c(2)      b(2)+c(2)],[     c(3)      b(3)+c(3)],'color',[1 1 1]*0.25,'LineWidth',1.5)
-    line([a(1)+b(1) a(1)+b(1)+c(1)],[a(2)+b(2) a(2)+b(2)+c(2)],[a(3)+b(3) a(3)+b(3)+c(3)],'color',[1 1 1]*0.25,'LineWidth',1.5)
-    line([a(1)+c(1) a(1)+b(1)+c(1)],[a(2)+c(2) a(2)+b(2)+c(2)],[a(3)+c(3) a(3)+b(3)+c(3)],'color',[1 1 1]*0.25,'LineWidth',1.5)
-    line([b(1)+c(1) a(1)+b(1)+c(1)],[b(2)+c(2) a(2)+b(2)+c(2)],[b(3)+c(3) a(3)+b(3)+c(3)],'color',[1 1 1]*0.25,'LineWidth',1.5)
+    lattice_vertices_x=[0 a(1);0 b(1);0 c(1);a(1) a(1)+b(1);a(1) a(1)+c(1);b(1) a(1)+b(1);b(1) b(1)+c(1);c(1) a(1)+c(1);c(1) b(1)+c(1);a(1)+b(1) a(1)+b(1)+c(1);a(1)+c(1) a(1)+b(1)+c(1);b(1)+c(1) a(1)+b(1)+c(1)];
+    lattice_vertices_y=[0 a(2);0 b(2);0 c(2);a(2) a(2)+b(2);a(2) a(2)+c(2);b(2) a(2)+b(2);b(2) b(2)+c(2);c(2) a(2)+c(2);c(2) b(2)+c(2);a(2)+b(2) a(2)+b(2)+c(2);a(2)+c(2) a(2)+b(2)+c(2);b(2)+c(2) a(2)+b(2)+c(2)];
+    lattice_vertices_z=[0 a(3);0 b(3);0 c(3);a(3) a(3)+b(3);a(3) a(3)+c(3);b(3) a(3)+b(3);b(3) b(3)+c(3);c(3) a(3)+c(3);c(3) b(3)+c(3);a(3)+b(3) a(3)+b(3)+c(3);a(3)+c(3) a(3)+b(3)+c(3);b(3)+c(3) a(3)+b(3)+c(3)];	
+    line(lattice_vertices_x(1,:),lattice_vertices_y(1,:),lattice_vertices_z(1,:),'color',[0.6350, 0.0780, 0.1840],'LineWidth',1.5)
+    line(lattice_vertices_x(2,:),lattice_vertices_y(2,:),lattice_vertices_z(2,:),'color',[0.4660, 0.6740, 0.1880],'LineWidth',1.5)
+    line(lattice_vertices_x(3,:),lattice_vertices_y(3,:),lattice_vertices_z(3,:),'color',[0.3010, 0.7450, 0.9330],'LineWidth',1.5)
+    for p=4:12
+        line(lattice_vertices_x(p,:),lattice_vertices_y(p,:),lattice_vertices_z(p,:),'color',[1 1 1]*0.25,'LineWidth',1,'LineStyle','--')
+    end
+    xl=xlim;
+    xlim([min([lattice_vertices_x(:);xl(1)]) max([lattice_vertices_x(:);xl(2)])])
+    yl=ylim;
+    ylim([min([lattice_vertices_y(:);yl(1)]) max([lattice_vertices_y(:);yl(2)])])
+    zl=zlim;
+    zlim([min([lattice_vertices_z(:);zl(1)]) max([lattice_vertices_z(:);zl(2)])])
 elseif lattice_vec2D
     a=POSCAR.vec(1,:);
     b=POSCAR.vec(2,:);
     avg_h=mean(POSCAR.positions(:,3));
-    line([   0      a(1)],[   0      a(2)],[avg_h avg_h],'color',[1 1 1]*0.25,'LineWidth',1.5)
-    line([   0      b(1)],[   0      b(2)],[avg_h avg_h],'color',[1 1 1]*0.25,'LineWidth',1.5)
-    line([a(1) a(1)+b(1)],[a(2) a(2)+b(2)],[avg_h avg_h],'color',[1 1 1]*0.25,'LineWidth',1.5)
-    line([b(1) a(1)+b(1)],[b(2) a(2)+b(2)],[avg_h avg_h],'color',[1 1 1]*0.25,'LineWidth',1.5)
+    line([   0      a(1)],[   0      a(2)],[avg_h avg_h],'color',[0.6350, 0.0780, 0.1840],'LineWidth',1.5)
+    line([   0      b(1)],[   0      b(2)],[avg_h avg_h],'color',[0.4660, 0.6740, 0.1880],'LineWidth',1.5)
+    line([a(1) a(1)+b(1)],[a(2) a(2)+b(2)],[avg_h avg_h],'color',[1 1 1]*0.25,'LineWidth',1,'LineStyle','--')
+    line([b(1) a(1)+b(1)],[b(2) a(2)+b(2)],[avg_h avg_h],'color',[1 1 1]*0.25,'LineWidth',1,'LineStyle','--')
 end
 % Add lights
 if lights

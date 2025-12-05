@@ -1,10 +1,12 @@
 function POSCAR=appendPOSCAR(POSCAR1,POSCAR2)
 %==================================================================================================================================%
-% appendPOSCAR.m:   Append a POSCAR structure to another (v0.1)
+% appendPOSCAR.m:   Append a POSCAR structure to another (v0.1.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (25/08/2025) - Creation
 %       author: EYG
+%   version 0.1.1 (29/11/2025) - Fix of the issue of the field constraint of POSCAR not being included in what was merged.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   POSCAR1, POSCAR2:   POSCAR structure
@@ -24,6 +26,9 @@ for p=1:length(POSCAR1.chemicals)
     chemicals{p}=POSCAR1.chemicals{p};
     n_chemicals(p)=POSCAR1.n_chemicals(p);
     positions{p}=POSCAR1.positions(count+1:count+POSCAR1.n_chemicals(p),:);
+    if ~isnan(POSCAR1.constraint)
+        constraint{p}=POSCAR1.constraint(count+1:count+POSCAR1.n_chemicals(p),:);
+    end
     count=count+POSCAR1.n_chemicals(p);
 end
 
@@ -36,6 +41,9 @@ for q=1:length(POSCAR2.chemicals)
         if strcmpi(POSCAR1.chemicals{p},POSCAR2.chemicals{q})
             n_chemicals(p)=n_chemicals(p)+POSCAR2.n_chemicals(q);
             positions{p}(end+1:end+POSCAR2.n_chemicals(q),:)=POSCAR2.positions(count+1:count+POSCAR2.n_chemicals(q),:);
+            if ~isnan(POSCAR1.constraint)
+                constraint{p}(end+1:end+POSCAR2.n_chemicals(q),:)=POSCAR2.constraint(count+1:count+POSCAR2.n_chemicals(q),:);
+            end
             count=count+POSCAR2.n_chemicals(q);
             isdone=true;
         end
@@ -44,6 +52,9 @@ for q=1:length(POSCAR2.chemicals)
     if ~isdone
         chemicals{end+1}=POSCAR2.chemicals{q};
         positions{end+1}=POSCAR2.positions(count+1:count+POSCAR2.n_chemicals(q),:);
+        if ~isnan(POSCAR1.constraint)
+            constraint{end+1}=POSCAR2.constraint(count+1:count+POSCAR2.n_chemicals(q),:);
+        end
         count=count+POSCAR2.n_chemicals(q);
     end
 end
@@ -56,6 +67,11 @@ count=0;
 for p=1:length(positions)
     pos_tmp=positions{p}(:,:);
     POSCAR.positions(count+1:count+POSCAR.n_chemicals(p),:)=positions{p}(:,:);
+    if POSCAR.Selective_dynamics
+        POSCAR.constraint(count+1:count+POSCAR.n_chemicals(p),:)=constraint{p}(:,:);
+    else
+        POSCAR.constraint=NaN;
+    end
     count=count+POSCAR.n_chemicals(p);
 end
 
