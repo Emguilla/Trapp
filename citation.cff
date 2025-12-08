@@ -9,8 +9,7 @@ message: >-
 type: software
 identifiers:
   - type: doi
-    value: 10.5281/zenodo.17853295
-	url: 'https/doi.org/10.5281/zenodo.17853295'
+    value: 'https://www.doi.org/10.5281/zenodo.17853295'
 authors:
   - given-names: Emerick Y.
     family-names: Guillaume
