@@ -6,8 +6,9 @@ title: Trapp
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
-type: software
+type: Numerical Toolbox
 identifiers:
+  - type: doi
   - value: 'https://www.doi.org/10.5281/zenodo.17853295'
 authors:
   - given-names: Emerick Y.
