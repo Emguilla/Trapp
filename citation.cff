@@ -6,7 +6,7 @@ title: Trapp
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
-type: Numerical Toolbox
+type: software
 identifiers:
   - type: doi
   - value: 'https://www.doi.org/10.5281/zenodo.17853295'
