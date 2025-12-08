@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
   - family-names: Guillaume
-    given-names: Emerick
+    given-names: Emerick Y.
     orcid: https://orcid.org/0000-0003-0728-4053
 title: "Toolbox for reaction analysis and post-processing (TRAPP)"
 version: 0.1
