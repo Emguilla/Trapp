@@ -1,6 +1,6 @@
 function [out]=str2bool(string)
 %==================================================================================================================================%
-% str2bool.m:   conversion of a character array of "T" and "F" into boolean matrix (v0.5)
+% str2bool.m:   conversion of a character array of "T" and "F" into boolean matrix (v0.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (10/09/2025) - Creation

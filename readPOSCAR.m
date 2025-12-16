@@ -1,6 +1,6 @@
 function POSCAR=readPOSCAR(filename)
 %==================================================================================================================================%
-% readPOSCAR.m: Read of a POSCAR file from VASP and creation of a POSCAR structure file in MatLab (v0.5)
+% readPOSCAR.m: Read of a POSCAR file from VASP and creation of a POSCAR structure file in MatLab (v0.5.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation

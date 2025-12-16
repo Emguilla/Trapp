@@ -1,6 +1,6 @@
 function Freq=readFrequencies(path,varargin)
 %==================================================================================================================================%
-% readEnergy.m: Extraction of the frequencies of a system from the output of HIVE (v0.1)
+% readEnergy.m: Extraction of the frequencies of a system from the output of HIVE (v0.2.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation

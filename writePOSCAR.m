@@ -1,11 +1,12 @@
 function writePOSCAR(POSCAR,filename,varargin)
 %==================================================================================================================================%
-% readPOSCAR.m: write a POSCAR MatLab structure in a file following VASP format (v0.1)
+% readPOSCAR.m: write a POSCAR MatLab structure in a file following VASP format (v0.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (02/12/2025) - Creation
 %       author: EYG
 %   version 0.2 (05/12/2025) - Add optional argument to decide to sort or not the atoms in the POSCAR.
+%       author: EYG
 %==================================================================================================================================%
 % args:
 %   POSCAR:     POSCAR structure to be written

@@ -1,6 +1,6 @@
 function F=readForces(path,varargin)
 %==================================================================================================================================%
-% readForces.m: Extraction of the forces acting on a system from the raw output of VASP (v0.1)
+% readForces.m: Extraction of the forces acting on a system from the raw output of VASP (v0.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (28/08/2025) - Creation

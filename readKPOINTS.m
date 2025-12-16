@@ -1,6 +1,6 @@
 function KPOINTS=readKPOINTS(filename,varargin)
 %==================================================================================================================================%
-% readPOSCAR.m: Read of a POSCAR file from VASP and creation of a POSCAR structure file in MatLab (v0.5)
+% readPOSCAR.m: Read of a KPOINTS file from VASP and creation of a KPOINTS structure file in MatLab (v0.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (16/12/2025) - Creation

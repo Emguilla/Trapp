@@ -6,8 +6,7 @@ function Q=Qr(molecule,T)
 %   version 0.1 (14/08/2025) - Creation
 %       author: EYG
 %   version 0.2 (20/08/2025) - Modification of the case where the argument is a POSCAR structure to use the mass now stored in the
-%                               POSCAR structure
-%       contrib: EYG
+%       author: EYG            POSCAR structure
 %==================================================================================================================================%
 % args:
 %   molecule:   - character string:   type of radical/molecule investigation (only H2, CH3 and CH4 are implemented)

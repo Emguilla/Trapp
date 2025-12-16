@@ -6,8 +6,7 @@ function Q=Qt(molecule,V,T)
 %   version 0.1 (14/08/2025) - Creation
 %       author: EYG
 %   version 0.2 (20/08/2025) - the input variable "molecule" can now be a POSCAR structure, since these structure now include the
-%                               atomic masses
-%       contrib: EYG
+%       author: EYG             atomic masses
 %==================================================================================================================================%
 % args:
 %   molecule:   - character string: type of radical/molecule investigation (only H, H2, CH3 and CH4 are implemented)

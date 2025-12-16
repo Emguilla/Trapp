@@ -1,6 +1,6 @@
 function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %==================================================================================================================================%
-% molecule3D.m: Draw 3D molecules (v2.0.4) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
+% molecule3D.m: Draw 3D molecules (v2.1) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
 %               (https://www.mathworks.com/matlabcentral/fileexchange/55231-molecule3d). Retrieved December 3, 2020.
 %==================================================================================================================================%
 % Version history:

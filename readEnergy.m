@@ -1,6 +1,6 @@
 function E=readEnergy(path,varargin)
 %==================================================================================================================================%
-% readEnergy.m: Extraction of the energy of a system from the raw output of VASP (v0.2)
+% readEnergy.m: Extraction of the energy of a system from the raw output of VASP (v0.3)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation
