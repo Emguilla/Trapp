@@ -1,51 +1,85 @@
-%function BS=readEIGENVAL(mode,varargin)
-% read optional arguments
-clear
-close all
-clc
-
-ispath=false;
-filename='EIGENVAL';
-mode='bandstructure';
+function EIGENVAL=readEIGENVAL(filename,varargin)
+%==================================================================================================================================%
+% readEIGENVAL.m: Read of an EIGENVAL file from VASP (v0.2)
+%==================================================================================================================================%
+% Version history:
+%   version 0.1 (15/12/2025) - Creation
+%       author: EYG
+%   version 0.2 (16/12/2025) - Handling of spin-polarised calculations
+%       author: EYG
+%==================================================================================================================================%
+% args:
+%   filename:   path + name of the file to be read as an EIGENVAL. Technically optionnal, and in such case it defaults to the file 
+%               EIGENVAL in the current directory
+%==================================================================================================================================%
+% Initialisation of the default parameters
 path='./';
-% if exist('varargin')
-%     for p=1:2:length(varargin)
-%         switch varargin{p}
-%             case 'path'
-%                 ispath=true;
-%                 path=varargin{p+1};
-%             case 'filename'
-%                 filename=varargin{p+1};
-%         end
-%     end
-% end
-% if ispath
-%     if ~strcmpi(path(end),'/')&&~strcmpi(path(end),'\')
-%         path=[path,'/'];
-%     end
-% end
-
+if nargin==0
+    filename='EIGENVAL';
+end
 EFermi=NaN;
 
-% Face-centered cubic
-%! Gamma-point %! X-point %! W-point %! L-point %! K-point %! U-point
-% HS=[0 0 0; 3/8 3/8 3/4; 1/2 1/2 1/2; 5/8  1/4 5/8; 1/2 1/4 3/4; 1/2 0 1/2];
-% HS_name={'\Gamma','K','L','U','W','X'};
-% Hexagonal
-%! Gamma-point %! L-point %! M-point
-HS=[0 0 0;1/3 1/3 0;1/2 0 0];
-HS_name={'\Gamma','K','M'};
+% Reading of the optional argument
+if exist('varargin')
+    for p=1:2:length(varargin)
+        switch varargin{p}
+            case 'path'
+                path=varargin{p+1};
+                if ~strcmpi(path(end),'/')&&~strcmpi(path(end),'\')
+                    path=[path,'/'];
+                end
+        end
+    end
+end
 
-if strcmpi(mode,'bandstructure')
-    fid=fopen([path,filename],'r');
-    fgetl(fid);
-    fgetl(fid);
-    fgetl(fid);
-    fgetl(fid);
-    fgetl(fid);
-    Data=textscan(fid,'%d',3,'commentStyle','%');
-    nbands=Data{1}(3);
-    nkpts=Data{1}(2);
+% file opening
+fid=fopen([path,filename],'r');
+
+% Reading of the header information: spin-polarisation
+Data=textscan(fid,'%d',4,'commentStyle','%');
+Ispin=Data{1}(4)==2;
+
+% Reading of the header information: Volume of cell, length of lattice vectors, POTIM
+Data=textscan(fid,'%f',5,'commentStyle','%');
+Vcell=Data{1}(1);
+norm_a=Data{1}(2);
+norm_b=Data{1}(3);
+norm_c=Data{1}(4);
+POTIM=Data{1}(5);
+
+% Reading of the header information: Initial temperature of the MD calculation
+Data=textscan(fid,'%f',1,'commentStyle','%');
+T_init=Data{1};
+
+% Reading of the header information: Sanity check, there must be the word "CAR" on line 5
+Data=textscan(fid,'%s',1,'commentStyle','%');
+if ~strcmpi('car',Data{1})
+    error('Something went wrong with your DOSCAR file. Line 5 should only contain the word "CAR"')
+end
+
+% Reading of the header information: Title of the system
+Data=textscan(fid,'%s',1,'commentStyle','%');
+Title=Data{1};
+
+% 
+Data=textscan(fid,'%d',3,'commentStyle','%');
+nbands=Data{1}(3);
+nkpts=Data{1}(2);
+if Ispin
+    for p=1:nkpts
+        fgetl(fid);
+        Data=textscan(fid,'%f',4,'commentStyle','%');
+        k(p,:)=Data{1}(1:3);
+        for q=1:nbands
+            Data=textscan(fid,'%d %f %f %f %f',1,'commentStyle','%');
+            E_u(p,q)=Data{2};
+            E_d(p,q)=Data{3};
+            Occ_u(p,q)=Data{4};
+            Occ_d(p,q)=Data{5};
+        end
+        EFermi=max([max(E_u(p,:).*(Occ_u(p,:)>0.5)) max(E_d(p,:).*(Occ_d(p,:)>0.5)) EFermi]); % def foireuse
+    end
+else
     for p=1:nkpts
         fgetl(fid);
         Data=textscan(fid,'%f',4,'commentStyle','%');
@@ -58,67 +92,15 @@ if strcmpi(mode,'bandstructure')
         EFermi=max([max(E(p,:).*(Occ(p,:)>0.5)) EFermi]); % def foireuse
     end
 end
-
-idx_rm=[];
-HS_str={};
-HS_idx=[];
-is_HS=zeros(nkpts,1);
-for p=1:nkpts
-    for q=1:length(HS(:,1))
-        if norm(k(p,:)-HS(q,:))<1e-3
-            is_HS(p)=true;
-            HS_str={HS_str{:},HS_name{q}};
-        end
-    end
+EIGENVAL.k=k;
+EIGENVAL.Ispin=Ispin;
+if Ispin
+    EIGENVAL.E_u=E_u;
+    EIGENVAL.E_d=E_d;
+    EIGENVAL.Occ_u=Occ_u;
+    EIGENVAL.Occ_d=Occ_d;
+else
+    EIGENVAL.E=E;
+    EIGENVAL.Occ=Occ;
 end
-
-HS_discontinuity=zeros(length(HS_str)/2+1);
-HS_label{1}=HS_str{1};
-for p=2:2:length(HS_str)-1
-    if strcmpi(HS_str{p+1},HS_str{p})
-        HS_label{p/2+1}=HS_str{p};
-    else
-        HS_label{p/2+1}=[HS_str{p},'/',HS_str{p+1}];
-        HS_discontinuity(p/2+1)=true;
-    end
-end
-HS_label{end+1}=HS_str{end};
-
-BZ_int=reshape(find(is_HS),2,length(find(is_HS))/2)';
-n_int=length(BZ_int(:,1));
-for p=1:n_int
-    for q=BZ_int(p,1):BZ_int(p,2)
-        dk_int{p}(q-BZ_int(p,1)+1)=norm(k(q,:)-k(BZ_int(p,1),:));
-    end
-    deltak(p)=dk_int{p}(end);
-    dk_int{p}=dk_int{p};
-end
-kx=[0 dk_int{1}(2:end)];
-for p=2:n_int
-    kx=[kx sum(deltak(1:p-1))+dk_int{p}(2:end)];
-end
-idx_rm=find(is_HS(2:end).*is_HS(1:end-1));
-k(idx_rm,:)=[];
-E(idx_rm,:)=[];
-Occ(idx_rm,:)=[];
-is_HS(idx_rm)=[];
-
-
-plot(kx,E-EFermi,'k')
-xlim([min(kx) max(kx)])
-yl=ylim;
-hold on
-kx_HS=kx(find(is_HS));
-for p=2:length(kx_HS)-1
-    if HS_discontinuity(p)
-        h=plot([kx_HS(p) kx_HS(p)],[yl(1) yl(2)],'--','color',[1 1 1]*0.75);
-        uistack(h,'bottom');
-    else
-        h=plot([kx_HS(p) kx_HS(p)],[yl(1) yl(2)],'color',[1 1 1]*0.75);
-        uistack(h,'bottom');
-    end
-end
-xticks(kx_HS)
-xticklabels(HS_label);
-set(gca,'fontsize',12,'fontname','cambria math')
-
+EIGENVAL.EFermi=EFermi;

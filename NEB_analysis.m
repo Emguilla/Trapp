@@ -5,6 +5,8 @@ function EnergyPathway=NEB_analysis(varargin)
 % Version history:
 %   version 0.1 (02/09/2025) - Creation using bits and pieces from my thesis works
 %       author: EYG
+%   version 0.1.1 (16/12/2025) - Correction of the call to readPOSCAR to account for the removal of optional argument 'XDATCAR'
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   opt. args:          'save_data', followed by the filename where the NEB structure must be saved
@@ -82,7 +84,7 @@ for p=1:n_images+2
     end
     tmp_Forces{p}=readForces([num2str(p-1,format_dir),'/']);
     tmp_MaxForces{p}=readMaxForces([num2str(p-1,format_dir),'/']);
-    tmp_XDATCAR{p}=readPOSCAR([num2str(p-1,format_dir),'/XDATCAR'],'XDATCAR',true);
+    tmp_XDATCAR{p}=readPOSCAR([num2str(p-1,format_dir),'/XDATCAR']);
 end
 n_atoms=sum(tmp_XDATCAR{1}(1).n_chemicals);
 

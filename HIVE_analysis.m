@@ -1,7 +1,7 @@
-function [POSCARs,Freq]=HIVE_analysis(varargin)
+function [POSCARs,Freq]=HIVE_analysis(idx,varargin)
 %==================================================================================================================================%
 % HIVE_analysis.m:  Use of the HIVE program to get accurate frequencies and the POSCAR structures corresponding to the displacement
-%                   in the direction of a specific mode. (v0.2)
+%                   in the direction of a specific mode. (v0.2.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (27/08/2025) - Creation
@@ -10,6 +10,8 @@ function [POSCARs,Freq]=HIVE_analysis(varargin)
 %       author: EYG
 %   version 0.2.1 (11/09/2025) - The frequencies are now extracted from the "Freq_HIVE.dat" file to accomodate for the changes in
 %       contrib: EYG                the HIVE_analysis.m script
+%   version 0.2.2 (08/12/2025) - For some reason, the index was considered an optional argument. This has been fixed.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   idx:        index of the mode to analyse (in decreasing order of frequency magnitude)
@@ -30,8 +32,6 @@ save_data=false;
 if exist('varargin','var')
     for p=1:2:length(varargin)
         switch lower(varargin{p})
-            case 'idx'
-                idx=varargin{p+1};
             case 'n_images'
                 n_images=varargin{p+1};
             case 'path'
