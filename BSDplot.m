@@ -1,10 +1,46 @@
 function BSDplot(EIGENVAL,DOSCAR,varargin)
-if ~isstruct(EIGENVAL)
-    EIGENVAL=readEIGENVAL(EIGENVAL);
-end
-if ~isstruct(DOSCAR)
-    DOSCAR=readDOSCAR(DOSCAR);
-end
+%==================================================================================================================================%
+% BSDplot.m:  transition state theory calculation of reaction rate coefficient (v0.1)
+%==================================================================================================================================%
+% Version history:
+%   version 0.1 (17/12/2025) - Creation
+%       author: EYG
+%==================================================================================================================================%
+% /!\ Warning: At the moment, only the high symmetry points mentioned in the paper of Setyawan and Curtarolo can be detected.
+% /!\ Warning: There is an implicit assumption that the endpoints of the lines on the edge of the IBZ are high-symmetry points.
+%==================================================================================================================================%
+% args:
+%   EIGENVAL:           path+filename to an EIGENVAL file, or an EIGENVAL structure generated with readEIGENVAL
+%   DOSCAR:             path+filename to a DOSCAR file, or a DOSCAR structure generated with readDOSCAR
+%   opt. args:          'symmetry', followed by the symmetry of the lattice. Possible choices are :
+%                           1) CUB/Cubic                            9) ORCC/C-centered orthorhombic
+%                           2) FCC/Face-centered cubic              10) HEX/Hexagonal
+%                           3) BCC/Body-centered cubic              11) RHL/Rhombohedral
+%                           4) TET/Tetragonal                       12) MCL/Monoclinic
+%                           5) BCT/Body-centered tetragonal         13) MCLC/C-centered monoclinic
+%                           6) ORC/Orthorhombic                     14) TRI/Triclinic
+%                           7) ORCF/Face-centered orthorhombic      15) Custom (not yet fully functional)
+%                           8) ORCI/Body-centered orthorhombic      16) None (not yet fully functional)
+%                           (default: user request for input)
+%                       'lm-decomposition', followed by true or false to specify whether or not a lm decomposition was performed
+%                           /!\ feature not yet functional
+%                       'KPOINTS', followed by the path+filename of a specific KPOINTS file, or a KPOINTS structure generated with
+%                           readKPOINTS
+%                           /!\ feature not yet functional
+%                       'POSCAR', followed by the path+filename of a specific POSCAR file, or a POSCAR structure (of length 1, i.e. 
+%                           not a XDATCAR file) generated with readPOSCAR
+%                           (default: NaN. However, it is mandatory to compute the high symmetry points of options 5, 7-9, 11-14)
+%                       'save', followed by the format to which the plot must be saved
+%                           (default: nothing is saved)
+%                           /!\ feature not yet functional
+%                       'BS', followed by true or false to specify whether to plot the bandstructure
+%                           (default: true)
+%                           /!\ feature not yet functional
+%                       'DOS', followed by true or false to specify whether to plot the density of states
+%                           (default: true)
+%                           /!\ feature not yet functional
+%==================================================================================================================================%
+% set default parameters
 pltBS=true;
 pltDOS=true;
 filename='BSD';
@@ -12,6 +48,16 @@ symmetry=NaN;
 issymmetry=false;
 POSCAR=NaN;
 KPOINTS=NaN;
+
+% Handling of the case where EIGENVAL and/or DOSCAR inputs are strings pointing to a file.
+if ~isstruct(EIGENVAL)
+    EIGENVAL=readEIGENVAL(EIGENVAL);
+end
+if ~isstruct(DOSCAR)
+    DOSCAR=readDOSCAR(DOSCAR);
+end
+
+% Reading of the optional argument
 if exist('varargin')
     for p=1:2:length(varargin)
         switch varargin{p}
@@ -38,6 +84,12 @@ if exist('varargin')
         end
     end
 end
+
+%==================================================================================================================================%
+% Determination of the symmetry of the lattice following specifications provided by the user. For the options 5, 7-9, 11-14, the
+% POSCAR of the system is read to extract the norm and angles of lattice vectors. All equations originates from the paper of 
+% Setyawan and Curtarolo.
+%==================================================================================================================================%
 while ~issymmetry
     issymmetry=true;
     switch lower(symmetry)
@@ -429,6 +481,7 @@ while ~issymmetry
     end
 end
 
+% Extracting data from EIGENVAL structure
 k=EIGENVAL.k;
 EFermi=DOSCAR.EFermi;
 if EIGENVAL.Ispin
@@ -445,11 +498,17 @@ else
     nbands=size(E,2);
 end
 
+%==================================================================================================================================%
+% Start of the high-symmetry point detection. Often, successive paths on the edge of the IBZ end then start at the same point, thus
+% creating duplicates on the list of k-points. They will be removed.
+%==================================================================================================================================%
 idx_rm=[];
 HS_str={};
 HS_idx=[];
 is_HS=zeros(nkpts,1);
+% Initial and final k-points are high symmetry points by construction
 is_HS([1 end])=true;
+% A good tell of a High-symmetry point is that the direction before and after are different
 angle=zeros(nkpts-1,1);
 angle([1 end])=0;
 for p=2:nkpts-2
@@ -465,6 +524,8 @@ for p=1:length(idx_chdir)
         is_HS(idx_chdir(p)+1)=true;
     end
 end
+
+% Detection of the name of the high-symmetry points according to the user entry
 idxHS=find(is_HS);
 for p=1:length(idxHS)
     HSdef=false;
@@ -480,6 +541,7 @@ for p=1:length(idxHS)
     end
 end
 
+% Check for discontinuities in the k-path, and merge labels if so
 HS_discontinuity=zeros(length(HS_str)/2+1);
 HS_label{1}=HS_str{1};
 for p=2:2:length(HS_str)-1
@@ -492,6 +554,7 @@ for p=2:2:length(HS_str)-1
 end
 HS_label{end+1}=HS_str{end};
 
+% Rescaling of the k-path to a parametric coordinate kx
 BZ_int=reshape(find(is_HS),2,length(find(is_HS))/2)';
 n_int=length(BZ_int(:,1));
 for p=1:n_int
@@ -505,6 +568,8 @@ kx=[0 dk_int{1}(2:end)];
 for p=2:n_int
     kx=[kx sum(deltak(1:p-1))+dk_int{p}(2:end)];
 end
+
+%Removal of duplicates along the k-path and plot of the bandstructure
 idx_rm=find(is_HS(2:end).*is_HS(1:end-1));
 k(idx_rm,:)=[];
 is_HS(idx_rm)=[];
@@ -525,6 +590,7 @@ end
 
 xlim([min(kx) max(kx)])
 yl=ylim;
+% Add solid or dashed line (if there is a discontinuity) in the background for the high-symmetry points
 kx_HS=kx(find(is_HS));
 for p=2:length(kx_HS)-1
     if HS_discontinuity(p)
@@ -539,11 +605,14 @@ xticks(kx_HS)
 xticklabels(HS_label);
 set(gca,'fontsize',12,'fontname','cambria math')
 
+% Extraction of the density of state data
 E=DOSCAR.E;
 DOS=DOSCAR.DOS;
 lmDOS=DOSCAR.PDOS;
 Ispin=DOSCAR.spin;
 EFermi=DOSCAR.EFermi;
+
+% figure parameterisation to accomodate for the plot of the density of state and lm-decomposition
 fig=figure('Units','pixels','Position',[200 120 647.2 425]); % [X X 560 425] by default
 ax=axes('Parent',fig);
 hold(ax,'on');
@@ -551,7 +620,7 @@ box on
 set(gca,'Units','normalized')
 set(gca,'Position',[0.1125 0.1087 0.6708 0.8054])
 xlim([min(E) max(E)])
-% Plot curves and store handles
+% Plot total dos (for spin and down if relevant) and store handles into uicontrol
 if ~Ispin
     displayname='Total DOS';
     DOS_tot=plot(ax,E-EFermi,DOS(:,1),'LineWidth',1,'DisplayName',displayname);
@@ -567,6 +636,7 @@ else
     uicontrol(fig,'Style','checkbox','String',displayname,'Value',1,'Units','pixels','Position',[520 339.5-25 75 25],...
         'Callback',@(src,~)toggleVisibility(src,DOS_tot_d));
 end
+% Same plot but for the lm-decomposition
 if ~isnan(lmDOS)
     lmDOS_label=DOSCAR.lm_labels;
     for p=1:length(lmDOS(1,:))
