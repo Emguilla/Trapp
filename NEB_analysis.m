@@ -9,13 +9,17 @@ function EnergyPathway=NEB_analysis(varargin)
 %       contrib: EYG
 %==================================================================================================================================%
 % args:
-%   opt. args:          'save_data', followed by the filename where the NEB structure must be saved
+%   opt. args:          'path', followed by the path to the NEB directory
+%                           (default: current directory)
+%                       'save_data', followed by the filename where the NEB structure must be saved
 %                           (default: nothing is saved)
 %                       'coordinates_mapping', followed by the type of calculation of the reaction coordinates (possible choices 
 %                           are 'parametric' or 'projected')
 %                           (default: parametric)
 %                       'projected_resolution', followed by the resolution of the projection onto the interpolation between states
 %                           (default: 1e-3)
+%                       'subNEB', followed by true or false to allow for recursive search of subNEB calculations
+%                           (default: false)
 %==================================================================================================================================%
 % set default and initial parameters
 save_data=false;
@@ -63,10 +67,13 @@ end
 cd(path)
 % Read the title of the VASP calculation and find format of directory names (i.e. number of zero padding)
 for p=1:10 % Format limitation: no more than 1e9 images (should be plenty enough)
-    if exist(num2str(1,['%0',num2str(p),'i']),'dir')
-        EnergyPathway.Title=grep([num2str(1,['%0',num2str(p),'i']),'/OUTCAR'],'SYSTEM =','fwd',0);
-        EnergyPathway.Title=strip(EnergyPathway.Title{1}(12:end));
-        format_dir=['%0',num2str(p),'i'];
+    for q=0:9
+        if exist(num2str(q,['%0',num2str(p),'i']),'dir')
+            Title=grep('INCAR','SYSTEM','fwd',0);
+            Title_idx=find(Title{1}=='=');
+            EnergyPathway.Title=strip(Title{1}((Title_idx(1)+1):end));
+            format_dir=['%0',num2str(p),'i'];
+        end
     end
 end
 
@@ -211,3 +218,4 @@ if save_data
     save(filename,'EnergyPathway')
 end
 cd(curr_dir)
+
