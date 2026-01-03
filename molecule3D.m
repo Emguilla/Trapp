@@ -1,6 +1,6 @@
 function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %==================================================================================================================================%
-% molecule3D.m: Draw 3D molecules (v2.1) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
+% molecule3D.m: Draw 3D molecules (v2.2) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
 %               (https://www.mathworks.com/matlabcentral/fileexchange/55231-molecule3d). Retrieved December 3, 2020.
 %==================================================================================================================================%
 % Version history:
@@ -24,8 +24,10 @@ function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %   version 2.0.4 (29/11/2025) - Add bond length of Si, Ca, Pb and S and their colour according to the Jmol CPK convention. In
 %       contrib: EYG                addition, the x/y/zlim are now set by the vertices of the lattices, or the extremes atoms
 %                                   positions when requesting to display the lattice vectors.
-%   version 2.1 (02-12-2025) - Add vdW bonding to the rendering, but only between O and H atoms, when the distance is above the OH
+%   version 2.1 (02/12/2025) - Add vdW bonding to the rendering, but only between O and H atoms, when the distance is above the OH
 %       author: EYG            distance for covalent bonding and below the maximum van der Waals bond distance set to 2 Angstrom
+%   version 2.2 (02/01/2026) - Fixing of X/YLim bug for 2D "lattice_vec" option, and the deletion of atom outside the boundaries
+%       author: EYG             only occurs when periodicity is enabled.
 %==================================================================================================================================%
 % args:
 %   POSCAR:             POSCAR structure, or path+filename of a POSCAR file
@@ -256,24 +258,24 @@ if periodic
             end
         end
     end
-end
-% Deletion of all the atoms that are beyond the boundaries set by XLim, YLim and ZLim
-count=0;
-max_count=sum(POSCAR.n_chemicals);
-k=1;
-while count<max_count
-    if POSCAR.xred(k,1)<aLim(1)||POSCAR.xred(k,1)>aLim(2)
-        POSCAR=delPOSCAR(POSCAR,k);
-        k=k-1;
-    elseif POSCAR.xred(k,2)<bLim(1)||POSCAR.xred(k,2)>bLim(2)
-        POSCAR=delPOSCAR(POSCAR,k);
-        k=k-1;
-    elseif POSCAR.xred(k,3)<cLim(1)||POSCAR.xred(k,3)>cLim(2)
-        POSCAR=delPOSCAR(POSCAR,k);
-        k=k-1;
+    % Deletion of all the atoms that are beyond the boundaries set by XLim, YLim and ZLim
+    count=0;
+    max_count=sum(POSCAR.n_chemicals);
+    k=1;
+    while count<max_count
+        if POSCAR.xred(k,1)<aLim(1)||POSCAR.xred(k,1)>aLim(2)
+            POSCAR=delPOSCAR(POSCAR,k);
+            k=k-1;
+        elseif POSCAR.xred(k,2)<bLim(1)||POSCAR.xred(k,2)>bLim(2)
+            POSCAR=delPOSCAR(POSCAR,k);
+            k=k-1;
+        elseif POSCAR.xred(k,3)<cLim(1)||POSCAR.xred(k,3)>cLim(2)
+            POSCAR=delPOSCAR(POSCAR,k);
+            k=k-1;
+        end
+        k=k+1;
+        count=count+1;
     end
-    k=k+1;
-    count=count+1;
 end
 % Display of the number of atoms that are in the POSCAR structure and the number of atoms actually shown
 if verbose
@@ -442,10 +444,17 @@ elseif lattice_vec2D
     a=POSCAR.vec(1,:);
     b=POSCAR.vec(2,:);
     avg_h=mean(POSCAR.positions(:,3));
-    line([   0      a(1)],[   0      a(2)],[avg_h avg_h],'color',[0.6350, 0.0780, 0.1840],'LineWidth',1.5)
-    line([   0      b(1)],[   0      b(2)],[avg_h avg_h],'color',[0.4660, 0.6740, 0.1880],'LineWidth',1.5)
-    line([a(1) a(1)+b(1)],[a(2) a(2)+b(2)],[avg_h avg_h],'color',[1 1 1]*0.25,'LineWidth',1,'LineStyle','--')
-    line([b(1) a(1)+b(1)],[b(2) a(2)+b(2)],[avg_h avg_h],'color',[1 1 1]*0.25,'LineWidth',1,'LineStyle','--')
+    lattice_vertices_x=[0 a(1);0 b(1);a(1) a(1)+b(1);b(1) a(1)+b(1)];
+    lattice_vertices_y=[0 a(2);0 b(2);a(2) a(2)+b(2);b(2) a(2)+b(2)];
+    line(lattice_vertices_x(1,:),lattice_vertices_y(1,:),[avg_h avg_h],'color',[0.6350, 0.0780, 0.1840],'LineWidth',1.5)
+    line(lattice_vertices_x(2,:),lattice_vertices_y(2,:),[avg_h avg_h],'color',[0.4660, 0.6740, 0.1880],'LineWidth',1.5)
+    for p=3:4
+        line(lattice_vertices_x(p,:),lattice_vertices_y(p,:),[avg_h avg_h],'color',[1 1 1]*0.25,'LineWidth',1,'LineStyle','--')
+    end
+    xl=xlim;
+    xlim([min([lattice_vertices_x(:);xl(1)]) max([lattice_vertices_x(:);xl(2)])])
+    yl=ylim;
+    ylim([min([lattice_vertices_y(:);yl(1)]) max([lattice_vertices_y(:);yl(2)])])
 end
 % Add lights
 if lights
