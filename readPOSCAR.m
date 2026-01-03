@@ -18,7 +18,9 @@ function POSCAR=readPOSCAR(filename)
 %   version 0.5 (10/09/2025) - Modification of the reading loop for XDATCAR to automatically accomodate for POSCAR or XDATCAR. The
 %       author: EYG             optional argument 'XDATCAR' has thus been removed.
 %   version 0.5.1 (05/12/2025) - Removal of the vestigial bit that handle varargin and removal of varargin as an input
-%       author: EYG
+%       contrib: EYG
+%   version 0.5.2 (01/01/2026) - The folding of stray atoms now occurs in a separate function "POSCARfolding.m"
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   filename:   path + name of the file to be read as a POSCAR (works for CONTCAR and XDATCAR as well)
@@ -134,21 +136,7 @@ while readmultiple
         end
         
         % Shift of stray atoms back into the cell (periodic boundary conditions)
-        for p=1:sum(POSCAR.n_chemicals)
-            update=false;
-            for q=1:3
-                if POSCAR.xred(p,q)<0
-                    update=true;
-                    POSCAR.xred(p,q)=POSCAR.xred(p,q)+1;
-                elseif POSCAR.xred(p,q)>1
-                    update=true;
-                    POSCAR.xred(p,q)=POSCAR.xred(p,q)-1;
-                end
-            end
-            if update
-                POSCAR.positions(p,:)=POSCAR.acell*POSCAR.vec'*POSCAR.xred(p,:)';
-            end
-        end
+        POSCAR=POSCARfolding(POSCAR);
         k=1;
         
         if k_XDATCAR==1
