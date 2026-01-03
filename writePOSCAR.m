@@ -7,6 +7,8 @@ function writePOSCAR(POSCAR,filename,varargin)
 %       author: EYG
 %   version 0.2 (05/12/2025) - Add optional argument to decide to sort or not the atoms in the POSCAR.
 %       author: EYG
+%   version 0.3 (21/12/2025) - Fix of the bug that miswrite the number of each chemical element.
+%       author: EYG
 %==================================================================================================================================%
 % args:
 %   POSCAR:     POSCAR structure to be written
@@ -38,7 +40,7 @@ fprintf(fid,'    %10.6f    %10.6f    %10.6f\n',POSCAR.vec(3,:));
 if sort_opt
     [lZ,ntype,ltype]=unique(POSCAR.Z);
     for p=1:length(lZ)
-        fseq(p)=sum(ltype==ntype(p));
+        fseq(p)=sum(ltype==p);
         species_seq{p}=POSCAR.symbols{ntype(p)};
     end
     [~,idx]=sort(ltype);
@@ -58,8 +60,9 @@ blank_space='     ';
 for p=1:length(POSCAR.chemicals)
 	fprintf(fid,[blank_space(1:end-length(POSCAR.chemicals{p})),POSCAR.chemicals{p}]);
 end
+fprintf(fid,'\n');
 for p=1:length(POSCAR.chemicals)
-    fprintf(fid,'\n  %3d',POSCAR.n_chemicals(1));
+    fprintf(fid,'  %3d',POSCAR.n_chemicals(p));
 end
 % Writing of the constraints or type of coordinates (direct or cartesian) and the positions of the atoms
 if POSCAR.Selective_dynamics==true
