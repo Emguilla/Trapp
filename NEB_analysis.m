@@ -7,6 +7,8 @@ function EnergyPathway=NEB_analysis(varargin)
 %       author: EYG
 %   version 0.1.1 (16/12/2025) - Correction of the call to readPOSCAR to account for the removal of optional argument 'XDATCAR'
 %       contrib: EYG
+%   version 0.1.2 (03/01/2026) - The recursive call only occurs on folders that starts with "subNEB" instead of "sub".
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   opt. args:          'path', followed by the path to the NEB directory
@@ -121,7 +123,7 @@ end
 % Recursive call to NEB_analysis to get subNEBs:
 % All subNEB calculations should be put in a folder named "subNEB_" followed by the letter corresponding to the interval within
 % which the subNEB was performed (e.g. "subNEB_C" if the subNEB ran between images in directories "02" and "03")
-subdir=dir('sub*');
+subdir=dir('subNEB_*');
 subdir=subdir([subdir(:).isdir]);
 if subNEB
     if ~isempty(subdir)
