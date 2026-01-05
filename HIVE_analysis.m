@@ -1,7 +1,7 @@
 function [POSCARs,Freq]=HIVE_analysis(idx,varargin)
 %==================================================================================================================================%
 % HIVE_analysis.m:  Use of the HIVE program to get accurate frequencies and the POSCAR structures corresponding to the displacement
-%                   in the direction of a specific mode. (v0.2.2)
+%                   in the direction of a specific mode. (v0.2.3)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (27/08/2025) - Creation
@@ -12,6 +12,8 @@ function [POSCARs,Freq]=HIVE_analysis(idx,varargin)
 %       contrib: EYG                the HIVE_analysis.m script
 %   version 0.2.2 (08/12/2025) - For some reason, the index was considered an optional argument. This has been fixed.
 %       contrib: EYG
+%   version 0.2.3 (06/01/2026) - The mounting of the drive has been commented. The possibility to mount will be added as a proper
+%       contrib: EYG                optional argument, or explained in the docs.
 %==================================================================================================================================%
 % args:
 %   idx:        index of the mode to analyse (in decreasing order of frequency magnitude)
@@ -55,16 +57,20 @@ end
 curr_dir=pwd;
 
 % In the event the hive3.exe file is not located on your Windows path (this is only a temporary change to your Windows path, it will
-% be reset upon restarting/shutting off.
+% be reset upon restarting/shutting off).
 drive_letter='E'; % Pick the letter corresponding to that assigned to the USB key by your Windows installation (e.g. "E")
 WSL_distro='Ubuntu-22.04'; % name of your linux distro
+old_path=getenv('PATH');
+if ~strcmpi(old_path(end),';')
+    old_path(end+1)=';';
+end
+setenv('PATH',old_path);
 add_path='C:\Users\emgui\OneDrive-UNamur\Cluster;'; % Path to your local copy of the hive3.exe file, do not forget the ending ";"
 if ~exist([add_path(1:end-1),'/hive3.exe'],'file')
     error('hive3.exe cannot be found in the specified path')
 end
 % If the Windows path already includes the path to your local copy of the hive3.exe file, nothing is added to the path.
-old_path=getenv('PATH');
-if contains(old_path,add_path)
+if contains(old_path,add_path(2:end-1))
     new_path=old_path;
 else
     new_path=[old_path,add_path];
@@ -79,8 +85,8 @@ cd(path)
 
 % In case the analysis must be performed on another drive than the one which hosts the WSL installation (e.g. USB key), the drive
 % must be mounted inside WSL. 
-[~,~]=system(['wsl -d ',WSL_distro,' sudo mount -t drvfs ',upper(drive_letter),': /mnt/',lower(drive_letter)]);
-% wsl -d Ubuntu-22.04 sudo mount -t drvfs E: /mnt/e
+% [~,~]=system(['wsl -d ',WSL_distro,' sudo mount -t drvfs ',upper(drive_letter),': /mnt/',lower(drive_letter)]);
+% it should look like : "wsl -d Ubuntu-22.04 sudo mount -t drvfs E: /mnt/e"
 
 % Check that all necessary files are present in the current folder (i.e., check that the calculation ran properly)
 if ~exist([path,'POSCAR'],'file')
