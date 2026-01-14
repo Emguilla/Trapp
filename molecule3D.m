@@ -1,6 +1,6 @@
 function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %==================================================================================================================================%
-% molecule3D.m: Draw 3D molecules (v2.2) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
+% molecule3D.m: Draw 3D molecules (v2.3) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
 %               (https://www.mathworks.com/matlabcentral/fileexchange/55231-molecule3d). Retrieved December 3, 2020.
 %==================================================================================================================================%
 % Version history:
@@ -28,6 +28,9 @@ function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %       author: EYG            distance for covalent bonding and below the maximum van der Waals bond distance set to 2 Angstrom
 %   version 2.2 (02/01/2026) - Fixing of X/YLim bug for 2D "lattice_vec" option, and the deletion of atom outside the boundaries
 %       author: EYG             only occurs when periodicity is enabled.
+%   version 2.3 (14/01/2026) - Modification of the default value of lattice_vec to display the 3D lattice vectors and highlight the 
+%       author: EYG             cell by default. The individual lattice within a supercell can now be shown. In addition, the 
+%                               absence of the a/b/cLim arguments of the fonction defaults to [0;1].
 %==================================================================================================================================%
 % args:
 %   POSCAR:             POSCAR structure, or path+filename of a POSCAR file
@@ -61,6 +64,7 @@ function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %                           --> "van der Waals": use the van der Waals radii in a ball-and-stick representation
 %                           --> "liquorice": modeling using only sticks, no balls shown
 %                           --> "large": radii are twice as big as with the "ballstick" option 
+%==================================================================================================================================%
 %==================================================================================================================================%
 % Parameters for the modeling : maximum interatomic distance, atoms colours and radii
 %==================================================================================================================================%
@@ -160,6 +164,18 @@ vdwrad(16)=1.52;
 if ischar(POSCAR)
     POSCAR=readPOSCAR(POSCAR);
 end
+% If the limits are not specified, default to [0;1]
+if ~exist('aLim','var')
+    aLim=[0 1];
+end
+if ~exist('bLim','var')
+    bLim=[0 1];
+end
+if ~exist('cLim','var')
+    cLim=[0 1];
+end
+% Get the limit of the supercell
+cellLim=[floor(aLim(1)) ceil(aLim(2));floor(bLim(1)) ceil(bLim(2));floor(cLim(1)) ceil(cLim(2))];
 % In the event an atom sits on the boundary defined by XLim, YLim and ZLim, it and its periodic copy are shown. This is possible if
 % the windows of XLim, YLim and ZLim is slightly increased by a tolerance set by the tolpos variable.
 tolpos=1e-3;
@@ -175,8 +191,9 @@ rotate_view_angle=[0 0];
 default_view_angle=[19.5 9];
 multi_view=false;
 verbose=false;
-lattice_vec3D=false;
+lattice_vec3D=true;
 lattice_vec2D=false;
+supercell=false;
 RC = 0.1; % Bond cylinder radius
 NS = 50; % Number of faces on the spheres
 NB = 50; % Number of faces on the cylinders
@@ -215,8 +232,16 @@ if exist('varargin','var')
                         lattice_vec3D=true;
                     elseif strcmpi(varargin{p+1},'2D')
                         lattice_vec2D=true;
+                        lattice_vec3D=false;
+                    elseif strcmpi(varargin{p+1},'3D_supercell')
+                        lattice_vec3D=true;
+                        supercell=true;
+                    elseif strcmpi(varargin{p+1},'2D_supercell')
+                        lattice_vec2D=true;
+                        lattice_vec3D=false;
+                        supercell=true;
                     else
-                        error('unknown argument for "lattice_vec" parameter (choices are "2D" or "3D")')
+                        error('unknown argument for "lattice_vec" parameter (choices are "2D" or "3D", "2D_supercell" or "3D_supercell")')
                     end
                 end
             case 'bond_radius'
@@ -420,25 +445,37 @@ if ~periodic&&~lattice_vec3D&&~lattice_vec2D
     ylim([min(xyz(:,2)) max(xyz(:,2))]+[-1 1]*offset)
     zlim([min(xyz(:,3)) max(xyz(:,3))]+[-1 1]*offset)
 end
-% Draw the unit cell if the lattice_vec parameter is set.
+% get translation vector to determine the shift of the lattice representation
+if supercell
+    translation_vec=table2array(combinations(cellLim(1,1):cellLim(1,2)-1,cellLim(2,1):cellLim(2,2)-1,cellLim(3,1):cellLim(3,2)-1));
+else
+    translation_vec=[0 0 0];
+end
+% Draw the unit cell if the lattice_vec parameter is set. The procedure is repeated for each cell of the supercell if relevant
 if lattice_vec3D
     a=POSCAR.vec(1,:);
     b=POSCAR.vec(2,:);
     c=POSCAR.vec(3,:);
+    xl=xlim;
+    yl=ylim;
+    zl=zlim;
     lattice_vertices_x=[0 a(1);0 b(1);0 c(1);a(1) a(1)+b(1);a(1) a(1)+c(1);b(1) a(1)+b(1);b(1) b(1)+c(1);c(1) a(1)+c(1);c(1) b(1)+c(1);a(1)+b(1) a(1)+b(1)+c(1);a(1)+c(1) a(1)+b(1)+c(1);b(1)+c(1) a(1)+b(1)+c(1)];
     lattice_vertices_y=[0 a(2);0 b(2);0 c(2);a(2) a(2)+b(2);a(2) a(2)+c(2);b(2) a(2)+b(2);b(2) b(2)+c(2);c(2) a(2)+c(2);c(2) b(2)+c(2);a(2)+b(2) a(2)+b(2)+c(2);a(2)+c(2) a(2)+b(2)+c(2);b(2)+c(2) a(2)+b(2)+c(2)];
     lattice_vertices_z=[0 a(3);0 b(3);0 c(3);a(3) a(3)+b(3);a(3) a(3)+c(3);b(3) a(3)+b(3);b(3) b(3)+c(3);c(3) a(3)+c(3);c(3) b(3)+c(3);a(3)+b(3) a(3)+b(3)+c(3);a(3)+c(3) a(3)+b(3)+c(3);b(3)+c(3) a(3)+b(3)+c(3)];	
+    for q=1:length(translation_vec(:,1))
+        shiftCell=translation_vec(q,1)*a+translation_vec(q,2)*b+translation_vec(q,3)*c;
+        for p=1:12
+            line(shiftCell(1)+lattice_vertices_x(p,:),shiftCell(2)+lattice_vertices_y(p,:),shiftCell(3)+lattice_vertices_z(p,:),'color',[1 1 1]*0.25,'LineWidth',1,'LineStyle','--')
+            xl=[min([lattice_vertices_x(:)+shiftCell(1);xl(1)]) max([lattice_vertices_x(:)+shiftCell(1);xl(2)])];
+            yl=[min([lattice_vertices_y(:)+shiftCell(2);yl(1)]) max([lattice_vertices_y(:)+shiftCell(2);yl(2)])];
+            zl=[min([lattice_vertices_z(:)+shiftCell(3);zl(1)]) max([lattice_vertices_z(:)+shiftCell(3);zl(2)])];
+        end
+    end
     line(lattice_vertices_x(1,:),lattice_vertices_y(1,:),lattice_vertices_z(1,:),'color',[0.6350, 0.0780, 0.1840],'LineWidth',1.5)
     line(lattice_vertices_x(2,:),lattice_vertices_y(2,:),lattice_vertices_z(2,:),'color',[0.4660, 0.6740, 0.1880],'LineWidth',1.5)
     line(lattice_vertices_x(3,:),lattice_vertices_y(3,:),lattice_vertices_z(3,:),'color',[0.3010, 0.7450, 0.9330],'LineWidth',1.5)
-    for p=4:12
-        line(lattice_vertices_x(p,:),lattice_vertices_y(p,:),lattice_vertices_z(p,:),'color',[1 1 1]*0.25,'LineWidth',1,'LineStyle','--')
-    end
-    xl=xlim;
     xlim([min([lattice_vertices_x(:);xl(1)]) max([lattice_vertices_x(:);xl(2)])])
-    yl=ylim;
     ylim([min([lattice_vertices_y(:);yl(1)]) max([lattice_vertices_y(:);yl(2)])])
-    zl=zlim;
     zlim([min([lattice_vertices_z(:);zl(1)]) max([lattice_vertices_z(:);zl(2)])])
 elseif lattice_vec2D
     a=POSCAR.vec(1,:);
