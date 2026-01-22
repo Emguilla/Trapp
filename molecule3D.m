@@ -31,6 +31,8 @@ function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %   version 2.3 (14/01/2026) - Modification of the default value of lattice_vec to display the 3D lattice vectors and highlight the 
 %       author: EYG             cell by default. The individual lattice within a supercell can now be shown. In addition, the 
 %                               absence of the a/b/cLim arguments of the fonction defaults to [0;1].
+%   version 2.3.1 (22/01/2026) - Adjustment to latest update: the 3D lattice vectors are only shown if the limits contain at least 
+%       contrib: EYG                the first unit cell. 
 %==================================================================================================================================%
 % args:
 %   POSCAR:             POSCAR structure, or path+filename of a POSCAR file
@@ -435,6 +437,9 @@ ZLim(1)=[aLim(1) bLim(1) cLim(1)]*POSCAR(1).vec(:,3);
 XLim(2)=[aLim(2) bLim(2) cLim(2)]*POSCAR(1).vec(:,1);
 YLim(2)=[aLim(2) bLim(2) cLim(2)]*POSCAR(1).vec(:,2);
 ZLim(2)=[aLim(2) bLim(2) cLim(2)]*POSCAR(1).vec(:,3);
+if ~(aLim(1)<=0&&bLim(1)<=0&&cLim(1)<=0&&aLim(2)>=1&&bLim(2)>=1&&cLim(2)>=1)
+    lattice_vec3D=false;
+end
 % There is an offset of 0.2 to 1 Å (depending on the rendering style) in all direction to display the full sphere, even when the 
 % atom is on the boundary
 xlim([min([min(xyz(:,1)) XLim(1)]) max([max(xyz(:,1)) XLim(2)])]+[-1 1]*offset)
