@@ -1,6 +1,6 @@
 function EnergyPathway=NEB_analysis(varargin)
 %==================================================================================================================================%
-% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.1.1)
+% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.1.3)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (02/09/2025) - Creation using bits and pieces from my thesis works
@@ -9,6 +9,8 @@ function EnergyPathway=NEB_analysis(varargin)
 %       contrib: EYG
 %   version 0.1.2 (03/01/2026) - The recursive call only occurs on folders that starts with "subNEB" instead of "sub".
 %       contrib: EYG
+%   version 0.1.3 (26/01/2026) - Sanity check has been included to ensure continuity of the DFT settings across the NEB calculation.
+%       contrib: EYG                Current parameters include NELECT, NUPDOWN, NKPTS and IVDW.
 %==================================================================================================================================%
 % args:
 %   opt. args:          'path', followed by the path to the NEB directory
@@ -46,6 +48,8 @@ if exist('varargin','var')
             case 'save_data'
                 save_data=true;
                 filename=varargin{p+1};
+            case 'verbose'
+                verbose=varargin{p+1};
             case 'coordinates_mapping'
                 if strcmpi(varargin{p+1},'projected')
                     parametric_coordinates=false;
@@ -96,6 +100,45 @@ for p=1:n_images+2
     tmp_XDATCAR{p}=readPOSCAR([num2str(p-1,format_dir),'/XDATCAR']);
 end
 n_atoms=sum(tmp_XDATCAR{1}(1).n_chemicals);
+
+% Sanity check: ensure that the most important parameters are the same across the NEB calculation. If verbose is activated, shows
+% the value of these parameters (currently, the NKPTS, IVDW and NUPDOWN settings are shown)
+for p=1:n_images+2
+    grep_tmp=grep([[num2str(p-1,format_dir),'/'],'OUTCAR'],'NKPTS');
+    nkpts(p)=str2num(grep_tmp{1}(31:36));
+    grep_tmp=grep([[num2str(p-1,format_dir),'/'],'OUTCAR'],'IVDW');
+    ivdw(p)=str2num(grep_tmp{1}(end-1:end));
+    grep_tmp=grep([[num2str(p-1,format_dir),'/'],'OUTCAR'],'NUPDOWN');
+    nupdown(p)=str2num(grep_tmp{1}(13:24));
+    grep_tmp=grep([[num2str(p-1,format_dir),'/'],'OUTCAR'],'NELECT');
+    nelect(p)=str2num(grep_tmp{1}(13:24));
+end
+if any(nkpts~=nkpts(1))
+    warning('Severe problem found: not all images were computed with the same BZ sampling!')
+elseif nkpts(1)==1&&verbose
+    disp('Gamma only calculation')
+elseif verbose
+    disp([num2str(nkpts(1)),' k-points are considered in the IBZ.'])
+end
+if any(ivdw~=ivdw(1))
+    warning('Severe problem found: not all images were computed with the same vdW correction scheme!')
+elseif verbose
+    disp(['van der Waals correction scheme: ',num2str(ivdw(1))])
+end
+if any(nupdown~=nupdown(1))
+    warning('Severe problem found: not all images were computed with the same number of up and down electrons!')
+elseif nupdown(1)==-1&&verbose
+    disp('No magnetisation enforced')
+elseif verbose
+    disp(['Total magnetisation forced to ',num2str(nupdown(1))])
+end
+if any(nelect~=nelect(1))
+    error('Severe problem found: not all images contains the same number of electrons!')
+elseif nupdown(1)~=-1&&(mod(nelect(1),2)==0&&mod(nupdown(1),2)==1)
+    error('Wrong magnetisation enforced: even number of electrons, but odd difference of up and down electrons!')
+elseif nupdown(1)~=-1&&(mod(nelect(1),2)==1&&mod(nupdown(1),2)==0)
+    error('Wrong magnetisation enforced: odd number of electrons, but even difference of up and down electrons!')
+end
 
 % Sometimes NEB calculations stops (e.g. due to time limit) and usually all images did not reach the same number of iteration
 if halted_calculation
