@@ -34,6 +34,7 @@ subNEB=false;
 idx_up=[NaN NaN];
 filename='EP.mat';
 curr_dir=pwd;
+verbose=false;
 halted_calculation=false;
 path='./';
 % Reading of the optional argument
