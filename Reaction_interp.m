@@ -1,10 +1,12 @@
 function R_out=Reaction_interp(R_in,n,varargin)
 %==================================================================================================================================%
-% Reaction_interp.m:    Interpolation of a reaction structure between each images (v0.1)
+% Reaction_interp.m:    Interpolation of a reaction structure between each images (v0.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (01/09/2025) - Creation
 %       author: EYG
+%   version 0.2 (27/01/2026) - The degree of freedom of the interpolated structures are now set to true if any POSCAR from the input
+%       author: EYG             has that degree of freedom set to true.
 %==================================================================================================================================%
 % args:
 %   R_in:   Reaction structure or POSCAR array
@@ -38,6 +40,14 @@ if ~isfield(R_in,'POSCAR')
     % set incremental counter for the number of images of the final array of POSCAR structures
     ki=1;
     R_out(1)=R_in(1);
+    for k=1:length(R_in)
+        if ~isnan(R_out(1).constraint(1))
+            R_out(1).constraint=(R_out(1).constraint+R_in(k).constraint)>0;
+        end
+    end
+    if any(isnan(R_out(1).constraint))
+        R_out(1).constraint=ones(1,1)*NaN;
+    end
     for k=1:length(R_in)-1
         % For successive POSCAR structures, get the displacement vector using ds_POSCAR.m
         [~,ds]=ds_POSCAR(R_in(k+1),R_in(k));
@@ -45,7 +55,11 @@ if ~isfield(R_in,'POSCAR')
         for p=1:n+1
             ki=ki+1;
             R_out(ki)=R_in(k);
+            R_out(ki).constraint=R_out(1).constraint;
             R_out(ki).positions=R_in(k).positions-(p/(n+1))*ds;
+            for p=1:sum(R_in(1).n_chemicals)
+                R_out(ki).xred(p,:)=(1/R_out(ki).acell)*inv(R_out(ki).vec')*R_out(ki).positions(p,:)';
+            end
         end
     end
 else
