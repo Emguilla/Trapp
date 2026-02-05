@@ -1,6 +1,6 @@
 function POSCAR=readPOSCAR(filename)
 %==================================================================================================================================%
-% readPOSCAR.m: Read of a POSCAR file from VASP and creation of a POSCAR structure file in MatLab (v0.6)
+% readPOSCAR.m: Read of a POSCAR file from VASP and creation of a POSCAR structure file in MatLab (v0.6.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation
@@ -23,6 +23,8 @@ function POSCAR=readPOSCAR(filename)
 %       contrib: EYG
 %   version 0.6 (27/01/2026) - All the files that matches the pattern of "filename" are now read and stored in a POSCAR array. This
 %       author: EYG             allows for reading of multiple POSCAR at once.
+%   version 0.6.1 (05/02/2026) - Definition of the case of reading multiple POSCAR files to prevent reading of multiple XDATCAR
+%       contrib: EYG                files.
 %==================================================================================================================================%
 % args:
 %   filename:   path + name of the file to be read as a POSCAR (works for CONTCAR and XDATCAR as well)
@@ -39,12 +41,10 @@ for r=1:length(ldir)
     % Initialisation of the default parameters
     readmultiple=true;
     % file opening
-    disp([ldir(r).folder,'/',ldir(r).name])
     fid=fopen([ldir(r).folder,'/',ldir(r).name],'r');
     
     % Reading of the header
     POSCAR.Title=fgets(fid);
-    disp(POSCAR.Title)
     POSCAR.Title=strtrim(POSCAR.Title(1:length(POSCAR.Title)-1));
     
     % Reading of lattice parameter
@@ -173,7 +173,13 @@ for r=1:length(ldir)
         end
     end
     fclose(fid);
-    CONTCAR(r)=XDATCAR;
-    disp(CONTCAR(r).Title)
+    if length(XDATCAR)>1
+        CONTCAR=XDATCAR;
+        if length(ldir)>1
+            error('Impossible to read an array of XDATCAR files at once. Please read them separately.')
+        end
+    else
+        CONTCAR(r)=XDATCAR;
+    end
 end
 POSCAR=CONTCAR;
