@@ -1,16 +1,18 @@
 function [nu_f,hind_rotor]=hr_freq(nu_i,path)
 %==================================================================================================================================%
 % hr_freq.m:    calculation of the pseudo-vibrational frequency corresponding to the rotational partition function of an adsorbate
-%               like a CH3 on a surface (v0.2)
+%               like a CH3 on a surface (v0.3)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation
 %       author: EYG
 %   version 0.1.1 (21/08/2025) - swap of the position of the moment of inertia and the rotational energy barrier. The reason comes
-%                                   from the fact that n and I are preprocessed, whereas W is manually entered by the user
+%       contrib: EYG                from the fact that n and I are preprocessed, whereas W is manually entered by the user
 %                                   afterwards
 %   version 0.2 (25/08/2025) - Add a logical variable assessing whether the last frequency has changed
 %       author: EYG
+%   version 0.3 (26/02/2026) - Add an integer to the "hindered_rotor.dat" file to specify the index of the vibrational mode to be 
+%       author: EYG             replaced (instead of defaulting to the last index as previously)
 %==================================================================================================================================%
 % args:
 %   nu_i:   Array of frequencies
@@ -19,15 +21,17 @@ function [nu_f,hind_rotor]=hr_freq(nu_i,path)
 %==================================================================================================================================%
 % The output array starts as identical as the input array
 nu_f=nu_i;
-% If there exists a free_rotor.dat file in the directory specified by path, the first value is read as the n-fold rotation number, 
-% the second as the energy barrier for rotation and the third as the moment of inertia
+% If there exists a free_rotor.dat file in the directory specified by path, the first value is read as the index of the vibrational 
+% mode to be replaced, the second value as the n-fold rotation number, the third as the energy barrier for rotation and the fourth 
+% as the moment of inertia
 if exist([path,'hindered_rotor.dat'],'file')
     data=load([path,'hindered_rotor.dat']);
-    n=data(1);
-    I=data(2);
-    W=data(3);
+    idx=data(1);
+    n=data(2);
+    I=data(3);
+    W=data(4);
     % Calculation of the roto-vibrational frequency (McClurg et al.)
-    nu_f(end)=n*sqrt(0.5*W/I)/(2*pi);
+    nu_f(idx)=n*sqrt(0.5*W/I)/(2*pi);
     % If there is a modification of the last frequency, the hind_rotor variable is set to true. If not, it is set to false
     hind_rotor=true;
 else
