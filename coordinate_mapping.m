@@ -1,10 +1,12 @@
-function x=coordinate_mapping(XDATCARs,parametric_coordinates,projected_coordinates,projected_resolution)
+function [x,ds_vec]=coordinate_mapping(XDATCARs,parametric_coordinates,projected_coordinates,projected_resolution)
 %==================================================================================================================================%
 % coordinate_mapping.m: computation of the reaction coordinates of the POSCAR structure matrix corresponding to an ensemble of 
-%                       XDATCAR files (v0.1)
+%                       XDATCAR files (v0.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (11/09/2025) - Creation
+%       author: EYG
+%   version 0.2 (16/02/2026) - The ds_vec matrix is also returned as output (to further track atoms movement)
 %       author: EYG
 %==================================================================================================================================%
 % args:
@@ -22,17 +24,21 @@ if parametric_coordinates
     for q=1:n_iter
         for p=2:n_images+2
             if p==2
-                ds(p,q)=ds_POSCAR(XDATCARs(p,q),XDATCARs(p-1,end));
+                [ds(p,q),ds_vec{p}]=ds_POSCAR(XDATCARs(p,q),XDATCARs(p-1,end));
             elseif p==n_images+2
-                ds(p,q)=ds_POSCAR(XDATCARs(p,end),XDATCARs(p-1,q));
+                [ds(p,q),ds_vec{p}]=ds_POSCAR(XDATCARs(p,end),XDATCARs(p-1,q));
             else
-                ds(p,q)=ds_POSCAR(XDATCARs(p,q),XDATCARs(p-1,q));
+                [ds(p,q),ds_vec{p}]=ds_POSCAR(XDATCARs(p,q),XDATCARs(p-1,q));
             end
         end
         for p=1:n_images+2
             x(p,q)=sum(ds(1:p,q))./sum(ds(:,q));
         end
     end
+    for p=2:n_images+2
+        ds_vec_tmp{p-1}=ds_vec{p};
+    end
+    ds_vec=ds_vec_tmp;
 % Projection mapping
 elseif projected_coordinates
     m=0:projected_resolution:1;
@@ -109,5 +115,6 @@ elseif projected_coordinates
             end
         end
     end
+    ds_vec=NaN;
 end
 
