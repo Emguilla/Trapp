@@ -14,6 +14,9 @@ function [POSCARs,Freq]=HIVE_analysis(idx,varargin)
 %       contrib: EYG
 %   version 0.2.3 (06/01/2026) - The mounting of the drive has been commented. The possibility to mount will be added as a proper
 %       contrib: EYG                optional argument, or explained in the docs.
+%   version 0.2.4 (26/02/2026) - Correction to the path where the output files are located. There was a conflict between the 
+%       contrib: EYG                directory change to the path and the call to the file in the same path, which doesn't exist at 
+%                                   the location of the target folder
 %==================================================================================================================================%
 % args:
 %   idx:        index of the mode to analyse (in decreasing order of frequency magnitude)
@@ -89,15 +92,15 @@ cd(path)
 % it should look like : "wsl -d Ubuntu-22.04 sudo mount -t drvfs E: /mnt/e"
 
 % Check that all necessary files are present in the current folder (i.e., check that the calculation ran properly)
-if ~exist([path,'POSCAR'],'file')
+if ~exist('POSCAR','file')
     error('POSCAR file is missing!')
 else
-    POSCAR=readPOSCAR([path,'POSCAR']);
+    POSCAR=readPOSCAR('POSCAR');
 end
-if ~exist([path,'OUTCAR'],'file')
+if ~exist('OUTCAR','file')
     error('OUTCAR file is missing!')
 end
-if ~exist([path,'DYNMAT'],'file')
+if ~exist('DYNMAT','file')
     error('DYNMAT file is missing!')
 end
 if ~exist('idx','var')
@@ -105,8 +108,8 @@ if ~exist('idx','var')
 end
 
 % Remove older HIVE_analysis directory, if any
-if exist([path,'HIVE_analysis'],'dir')
-    system(['wsl -d ',WSL_distro,' rm -rf ',path,'HIVE_analysis']);
+if exist('HIVE_analysis','dir')
+    system(['wsl -d ',WSL_distro,' rm -rf HIVE_analysis']);
 end
 
 % Create a new HIVE_analysis directory and copy the files inside
