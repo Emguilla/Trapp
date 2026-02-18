@@ -1,12 +1,14 @@
 function Q=Qt(molecule,V,T)
 %==================================================================================================================================%
-% Qt.m: Calculation of the translational partition function (v0.2)
+% Qt.m: Calculation of the translational partition function (v0.2.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation
 %       author: EYG
-%   version 0.2 (20/08/2025) - the input variable "molecule" can now be a POSCAR structure, since these structure now include the
+%   version 0.2 (20/08/2025) - The input variable "molecule" can now be a POSCAR structure, since these structure now include the
 %       author: EYG             atomic masses
+%   version 0.2.1 (18/02/2026) - The mass of the molecule (in case of a POSCAR structure) was previously expressed in uma instead 
+%       contrib: EYG                of kilograms. This has been fixed. 
 %==================================================================================================================================%
 % args:
 %   molecule:   - character string: type of radical/molecule investigation (only H, H2, CH3 and CH4 are implemented)
@@ -28,7 +30,7 @@ if ischar(molecule) % Shortcut for common molecules
             m_g=4*ptable.mass(1)*uma+1*ptable.mass(6)*uma;
     end
 elseif isstruct(molecule) % General case for a cluster of atoms defined in a POSCAR structure
-    m_g=sum(molecule.mass);
+    m_g=sum(molecule.mass)*uma;
 end
 Q=V*(2*pi*m_g*kB*T/(h^2))^(3/2);
 end
