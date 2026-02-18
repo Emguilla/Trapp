@@ -1,6 +1,6 @@
 function EnergyPathway=NEB_analysis(varargin)
 %==================================================================================================================================%
-% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.1.3)
+% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.2.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (02/09/2025) - Creation using bits and pieces from my thesis works
@@ -15,6 +15,8 @@ function EnergyPathway=NEB_analysis(varargin)
 %       author: EYG             is now a separate visualisation of the results for single-iteration calculations. In addition,
 %                               titles of POSCAR structures are chosen to reflect the number of the images and the subNEB
 %                               calculation it originated from when relevant.
+%   version 0.2.1 (18/02/2026) - Deletion of the field "str_xticklab" from the EnergyPathway structure and correction of a typo in  
+%       contrib: EYG            a warning.
 %==================================================================================================================================%
 % args:
 %   opt. args:          'path', followed by the path to the NEB directory
@@ -239,7 +241,7 @@ if ~visual_only
     end
     for p=1:n_atoms
         if any(~constraint(p,:))&&ds_tot_atoms(p)~=0
-            warning(sprintf(['Severe problem found: position of (moving) atom ',num2str(p),' has been frozen along at least one direction! Yet the atoms is displaced by ',num2str(ds_tot_atoms(p),'%6.2e'),' Angstrom during the reaction!']))
+            warning(sprintf(['Severe problem found: position of (moving) atom ',num2str(p),' has been frozen along at least one direction! Yet the atom is displaced by ',num2str(ds_tot_atoms(p),'%6.2e'),' Angstrom during the reaction!']))
         end
     end
 
@@ -251,7 +253,7 @@ if ~visual_only
     EnergyPathway.reaction_coordinates=x;
     EnergyPathway.Forces=Forces;
     EnergyPathway.MaxForces=MaxForces;
-    EnergyPathway.str_xticklab=tmp_str_xticklab;
+%    EnergyPathway.str_xticklab=tmp_str_xticklab;
     if subNEB
         EnergyPathway.subrun=subrun;
         for p=1:length(subdir)
@@ -304,6 +306,9 @@ if ~visual_only
     EnergyPathway.EDIFFG=EDIFFG;
     % save if requested
     if save_data
+        if isfield('str_xticklab',EnergyPathway)
+            EnergyPathway=rmfield(EnergyPathway,'str_xticklab');
+        end
         save(filename,'EnergyPathway')
     end
     cd(curr_dir)
@@ -383,4 +388,7 @@ elseif postprocessing&&~subNEB&&isscalar(EnergyPathway.XDATCAR(1,:)) % Case of a
     xticklabels(str_xticklab)
     ylabel('Maximum force acting on atoms')
     set(gca,'fontsize',12,'fontname','cambria math')
+end
+if isfield('str_xticklab',EnergyPathway)
+    EnergyPathway=rmfield(EnergyPathway,'str_xticklab');
 end
