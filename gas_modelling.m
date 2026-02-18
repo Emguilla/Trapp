@@ -57,5 +57,5 @@ for p=1:n_gas
     % Calculation of the total partition function
     gas(p).Q_tot=gas(p).Qt*gas(p).Qr*gas(p).Qv;
     % Calculation of the contribution to the exponential prefactor
-    gas(p).A=1/Na*gas(p).Q_tot*exp(gas(p).ZPE/(kB*T));
+    gas(p).A=1/Na*gas(p).Q_tot*exp(-gas(p).ZPE/(kB*T));
 end
