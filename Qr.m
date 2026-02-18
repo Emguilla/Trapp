@@ -1,12 +1,14 @@
 function Q=Qr(molecule,T)
 %==================================================================================================================================%
-% Qt.m: Calculation of the rotational partition function (v0.2)
+% Qt.m: Calculation of the rotational partition function (v0.2.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation
 %       author: EYG
 %   version 0.2 (20/08/2025) - Modification of the case where the argument is a POSCAR structure to use the mass now stored in the
 %       author: EYG            POSCAR structure
+%   version 0.2.1 (18/02/2026) - Added an error case when entering an unknown molecules, and handling the case of the hydrogen
+%       contrib: EYG                radical
 %==================================================================================================================================%
 % args:
 %   molecule:   - character string:   type of radical/molecule investigation (only H2, CH3 and CH4 are implemented)
@@ -19,6 +21,8 @@ mH=ptable.mass(1)*uma;
 mC=ptable.mass(6)*uma;
 if ischar(molecule) % Case of a well-defined molecule
     switch molecule
+        case 'H'
+            Q=1;
         case 'H2' % Calculation of the rotational partition function as rigid rotor
             a_HH=0.75049e-10;
             Q=0;
@@ -48,6 +52,8 @@ if ischar(molecule) % Case of a well-defined molecule
             I=8/3*mH*(a_CH)^2;
             B=hbar^2/(2*I);
             Q=(sqrt(pi)/sigma)*sqrt((kB*T/(B))^3);
+        otherwise
+            error('Severe problem found: unknown chemical. Please enter a known chemical or use a POSCAR of your gas molecule as input')
     end
 elseif isstruct(molecule) % Case of an asymetrical molecule
     % Determination of the centre of mass
