@@ -55,7 +55,7 @@ for p=1:n_gas
     % Calculation of the zero-point energy
     gas(p).ZPE=ZPE(gas(p).nu);
     % Calculation of the total partition function
-    gas(p).Q_tot=gas(p).Qt*gas(p).Qr*gas(p)*gas(p).Qv;
+    gas(p).Q_tot=gas(p).Qt*gas(p).Qr*gas(p).Qv;
     % Calculation of the contribution to the exponential prefactor
     gas(p).A=Na*Q_tot*exp(gas(p).ZPE/(kB*T));
 end
