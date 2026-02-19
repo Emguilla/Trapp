@@ -33,7 +33,9 @@ function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %                               absence of the a/b/cLim arguments of the fonction defaults to [0;1].
 %   version 2.3.1 (22/01/2026) - Adjustment to latest update: the 3D lattice vectors are only shown if the limits contain at least 
 %       contrib: EYG                the first unit cell. 
-%   version 2.3.2 (19/02/2026) - The duplication of the unit cell and its subsequent cuts are performed in subPOSCAR.
+%   version 2.3.2 (19/02/2026) - The duplication of the unit cell and its subsequent cuts are performed in subPOSCAR. In addition,
+%       contrib: EYG                the rendering can now be performed even in the event there are no distances below the bond 
+%                                   threshold.
 %==================================================================================================================================%
 % args:
 %   POSCAR:             POSCAR structure, or path+filename of a POSCAR file
@@ -304,6 +306,7 @@ ks=find(ds<DBOND_MAX)';
 % matrix.
 k=1;
 kv=1;
+ks_n=[];
 for p_ks=1:length(ks)
     for pZ=unique(POSCAR.Z)
         for qZ=unique(POSCAR.Z)
