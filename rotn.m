@@ -1,6 +1,6 @@
 function POSCAR=rotn(origin,n,alpha_deg,POSCAR)
 %==================================================================================================================================%
-% rotn.m: rotation of a structure around an arbitrary axis n (v0.1)
+% rotn.m: rotation of a structure around an arbitrary axis n (v0.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (21/08/2025) - Creation
