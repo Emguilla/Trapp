@@ -1,7 +1,7 @@
 function [POSCARs,Freq]=HIVE_analysis(idx,varargin)
 %==================================================================================================================================%
 % HIVE_analysis.m:  Use of the HIVE program to get accurate frequencies and the POSCAR structures corresponding to the displacement
-%                   in the direction of a specific mode. (v0.2.4)
+%                   in the direction of a specific mode. (v0.2.5)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (27/08/2025) - Creation
@@ -14,9 +14,11 @@ function [POSCARs,Freq]=HIVE_analysis(idx,varargin)
 %       contrib: EYG
 %   version 0.2.3 (06/01/2026) - The mounting of the drive has been commented. The possibility to mount will be added as a proper
 %       contrib: EYG                optional argument, or explained in the docs.
-%   version 0.2.4 (26/02/2026) - Correction to the path where the output files are located. There was a conflict between the 
+%   version 0.2.4 (16/02/2026) - Correction to the path where the output files are located. There was a conflict between the 
 %       contrib: EYG                directory change to the path and the call to the file in the same path, which doesn't exist at 
 %                                   the location of the target folder
+%   version 0.2.5 (19/02/2026) - Correction to the limits of the rendering. Previously the atoms could get out of the field of view
+%       contrib: EYG                during the vibration displacement
 %==================================================================================================================================%
 % args:
 %   idx:        index of the mode to analyse (in decreasing order of frequency magnitude)
