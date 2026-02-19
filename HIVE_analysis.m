@@ -1,7 +1,7 @@
 function [POSCARs,Freq]=HIVE_analysis(idx,varargin)
 %==================================================================================================================================%
 % HIVE_analysis.m:  Use of the HIVE program to get accurate frequencies and the POSCAR structures corresponding to the displacement
-%                   in the direction of a specific mode. (v0.2.3)
+%                   in the direction of a specific mode. (v0.2.4)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (27/08/2025) - Creation
