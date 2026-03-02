@@ -1,6 +1,6 @@
 function EnergyPathway=NEB_analysis(varargin)
 %==================================================================================================================================%
-% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.2.1)
+% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.2.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (02/09/2025) - Creation using bits and pieces from my thesis works
@@ -17,6 +17,8 @@ function EnergyPathway=NEB_analysis(varargin)
 %                               calculation it originated from when relevant.
 %   version 0.2.1 (18/02/2026) - Deletion of the field "str_xticklab" from the EnergyPathway structure and correction of a typo in  
 %       contrib: EYG            a warning.
+%   version 0.2.2 (02/03/2026) - Reading of files now occurs in the folders in the "ldir" list.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   opt. args:          'path', followed by the path to the NEB directory
@@ -105,40 +107,42 @@ if ~visual_only
             end
         end
     end
-    
     % Find all directories containing endpoints and images, and reading of the energies, positions and forces for each iteration and
     % each image
     ldir=dir('0*');
+    Title=grep([ldir(1).name,'/OUTCAR'],'SYSTEM','fwd',0);
+    Title_idx=find(Title{1}=='=');
+    EnergyPathway.Title=strip(Title{1}((Title_idx(1)+1):end));
     n_images=length(ldir)-2;
     n_iter=[];
     for p=1:n_images+2
-        tmp_energies{p}=readEnergy([num2str(p-1,format_dir),'/']);
+        tmp_energies{p}=readEnergy(ldir(p).name);
         n_iter=max([n_iter length(tmp_energies{p})]);
         if ~(p==1||p==n_images+2)&&length(tmp_energies{p})~=length(tmp_energies{2})
             warning('This calculation has not been successful, some images were still running when VASP stopped')
             halted_calculation=true;
         end
-        tmp_Forces{p}=readForces([num2str(p-1,format_dir),'/']);
-        tmp_MaxForces{p}=readMaxForces([num2str(p-1,format_dir),'/']);
-        tmp_XDATCAR{p}=readPOSCAR([num2str(p-1,format_dir),'/XDATCAR']);
-        tmp_POSCAR(p)=readPOSCAR([num2str(p-1,format_dir),'/POSCAR']);
-        tmp_CONTCAR(p)=readPOSCAR([num2str(p-1,format_dir),'/CONTCAR']);
+        tmp_Forces{p}=readForces(ldir(p).name);
+        tmp_MaxForces{p}=readMaxForces(ldir(p).name);
+        tmp_XDATCAR{p}=readPOSCAR([ldir(p).name,'/XDATCAR']);
+        tmp_POSCAR(p)=readPOSCAR([ldir(p).name,'/POSCAR']);
+        tmp_CONTCAR(p)=readPOSCAR([ldir(p).name,'/CONTCAR']);
     end
     n_atoms=sum(tmp_XDATCAR{1}(1).n_chemicals);
     
     % Sanity check: ensure that the most important parameters are the same across the NEB calculation. If verbose is activated, shows
     % the value of these parameters (currently, the NKPTS, IVDW and NUPDOWN settings are shown)
     for p=1:n_images+2
-        grep_tmp=grep([[num2str(p-1,format_dir),'/'],'OUTCAR'],'NKPTS');
+        grep_tmp=grep([ldir(p).name,'/OUTCAR'],'NKPTS');
         nkpts(p)=str2num(grep_tmp{1}(31:36));
-        grep_tmp=grep([[num2str(p-1,format_dir),'/'],'OUTCAR'],'IVDW');
+        grep_tmp=grep([ldir(p).name,'/OUTCAR'],'IVDW');
         ivdw(p)=str2num(grep_tmp{1}(end-1:end));
-        grep_tmp=grep([[num2str(p-1,format_dir),'/'],'OUTCAR'],'NUPDOWN');
+        grep_tmp=grep([ldir(p).name,'/OUTCAR'],'NUPDOWN');
         nupdown(p)=str2num(grep_tmp{end}(13:24));
-        grep_tmp=grep([[num2str(p-1,format_dir),'/'],'OUTCAR'],'NELECT');
+        grep_tmp=grep([ldir(p).name,'/OUTCAR'],'NELECT');
         nelect(p)=str2num(grep_tmp{1}(13:24));
         if p~=1&&p~=n_images+2
-            grep_tmp=grep([[num2str(p-1,format_dir),'/'],'OUTCAR'],'stopping-criterion for IOM');
+            grep_tmp=grep([ldir(p).name,'/OUTCAR'],'stopping-criterion for IOM');
             EDIFFG=str2num(grep_tmp{1}(13:19));
         end
     end
@@ -157,7 +161,7 @@ if ~visual_only
     if any(nupdown~=nupdown(1))
         warning('NUPDOWN/MAGMON constraint are not identical for all images!')
         for p=1:n_images+2
-            grep_tmp=grep([[num2str(p-1,format_dir),'/'],'OUTCAR'],'number of electron ');
+            grep_tmp=grep([ldir(p).name,'/OUTCAR'],'number of electron ');
             effective_nupdown(p)=str2num(grep_tmp{end}(55:65));
         end
         if any(effective_nupdown~=effective_nupdown(1))
@@ -303,7 +307,11 @@ if ~visual_only
             EnergyPathway=rmfield(EnergyPathway,'idx_up');
         end
     end
-    EnergyPathway.EDIFFG=EDIFFG;
+    if exist('EDIFFG','var')
+        EnergyPathway.EDIFFG=EDIFFG;
+    else
+        EnergyPathway.EDIFFG=NaN;
+    end
     % save if requested
     if save_data
         if isfield('str_xticklab',EnergyPathway)
