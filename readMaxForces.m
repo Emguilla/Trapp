@@ -1,16 +1,21 @@
 function F=readMaxForces(path,varargin)
 %==================================================================================================================================%
-% readEnergy.m: Extraction of the maximum force exerced on the atoms in the system from the raw output of VASP (v0.2)
+% readEnergy.m: Extraction of the maximum force exerced on the atoms in the system from the raw output of VASP (v0.2.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (28/08/2025) - Creation
 %       author: EYG
 %   version 0.2 (11/09/2025) - The recording of the grep search is now optional, and default is no save
 %       author: EYG
+%   version 0.2.1 (02/03/2026) - Add a "/" if there is none at the end of the path to the OUTCAR file to be read.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   path:   Location of the directory where the OUTCAR file is stored
 %==================================================================================================================================%
+if ~strcmpi(path(end),'/')&&~strcmpi(path(end),'\')
+    path=[path,'/'];
+end
 save=false;
 % read optional arguments
 if exist('varargin')
