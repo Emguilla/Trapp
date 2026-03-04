@@ -1,6 +1,6 @@
 function R_out=VTST_rates(path,press,V,T,molecules,concentrations,gas_Fwd,gas_Bwd)
 %==================================================================================================================================%
-% VTST_rates.m:  transition state theory calculation of reaction rate coefficient (v0.3)
+% VTST_rates.m:  transition state theory calculation of reaction rate coefficient (v0.4)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation (based on former bits and pieces from my thesis)
@@ -12,15 +12,11 @@ function R_out=VTST_rates(path,press,V,T,molecules,concentrations,gas_Fwd,gas_Bw
 %   version 0.3 (12/09/2025) - Modification of the code to include the new formatting of the EnergyPathway structure type. This
 %       author: EYG             removes the POSCAR and energy reading, along with the reaction coordinates computation, which is 
 %                               now performed inside NEB_analysis.m
-%   version 0.4 (19/02/2026) - Change of the input to specify the gas species via a string array and an array specifying the 
-%                               concentrations. Both normal and variational calculations can be handled with this program. Multiple
+%   version 0.4 (02/03/2026) - Change of the input to specify the gas species via a string array and an array specifying the 
+%       author: EYG             concentrations. Both normal and variational calculations can be handled with this program. Multiple
 %                               sanity checks are performed: on the number of degree of freedom, on the fact that all DOF are free,
 %                               on the difference between the final structure of the NEB calculations and the inputs of the
 %                               vibrational calculations, etc...
-% Upcoming modifs: allow for difference between the NEB images and the actual images which phonon spectrum was computed. On way to
-% do so could be by checking which NEB image is closer to the phonon image (with a tolerance of 0.01 Angstrom maybe?). In case there
-% are important image missing (e.g. endpoints), use the energy of the NEB calculation instead of the first energy of the phonon
-% calculation?
 %==================================================================================================================================%
 % args:
 %   path:           Location of reaction directory
@@ -33,27 +29,28 @@ function R_out=VTST_rates(path,press,V,T,molecules,concentrations,gas_Fwd,gas_Bw
 %   gas_Fwd:        index of the molecule to be considered as part of the reactants (default: NaN)
 %   gas_Bwd:        index of the molecule to be considered as part of the products (default: NaN)
 %==================================================================================================================================%
-% Default parameters
-press=25e3;
-V=1e-6;
-T=1200;
-molecules={'H','H2','CH3','CH4'};
-concentrations=[0.01 1 0 0];
-path='A0A0+CH3_A1A0+CH4';
-gas_Fwd=3;
-gas_Bwd=4;
-path='A0A0+H_A1A0+H2';
-gas_Fwd=1;
-gas_Bwd=2;
-path='A0A0_A1A0+H';
-gas_Fwd=NaN;
-gas_Bwd=1;
+% Debug parameters:
+%     press=25e3;
+%     V=1e-6;
+%     T=1200;
+%     molecules={'H','H2','CH3','CH4'};
+%     path='A0A0+CH3_A1A0+CH4';
+%     gas_Fwd=3;
+%     gas_Bwd=4;
+%     concentrations=[0.01 1 0.001 0.01];
+%     path='A0A0+H_A1A0+H2';
+%     gas_Fwd=1;
+%     gas_Bwd=2;
+%     concentrations=[0.01 1 0 0];
+%     path='A0A0_A1A0+H';
+%     gas_Fwd=NaN;
+%     gas_Bwd=1;
+%     concentrations=[0.01 1 0 0];
 %==================================================================================================================================%
 load('constant_fund.mat','Na','kB','e','h')
 if ~strcmpi(path(end),'/')&&~strcmpi(path(end),'\')
     path=[path,'/'];
 end
-
 E_tol=1e-3; % Tolerance for the energy comparisons
 ds_tol=1e-3; % Tolerance for the POSCAR/CONTCAR comparisons
 disp(['a tolerance of ',num2str(E_tol*1e3),' meV is applied to the energy comparisons.'])
@@ -70,10 +67,12 @@ elseif exist([path,'tTS'],'dir')
     variational='';
     n_lTS=1;
 end
-
 % Read images to extract the geometry and energy of the system along the minimum energy pathway
-NEB=NEB_analysis('path',[path,'/Images']);
-
+if ~exist([path,'Images/NEB.mat'])
+    EnergyPathway=NEB_analysis('path',[path,'/Images'],'save_data','NEB.mat');
+else
+    load([path,'Images/NEB.mat'])
+end
 % Extraction of the geometries of endpoints and TS
 s0.POSCAR=readPOSCAR([path,'Reactants/POSCAR']);
 if ~all(s0.POSCAR.constraint)
@@ -98,19 +97,18 @@ sf.nu=sf.nu(sf.nu~=0);
 % Computation of the zero-point energy
 s0.ZPE=ZPE(s0.nu);
 sf.ZPE=ZPE(sf.nu);
-
 % Reading of the POSCARs
 for p=1:n_lTS
     TS.POSCAR(p)=readPOSCAR([path,variational,ldir(p).name,'/POSCAR']);
     if ~isempty(variational)
-        ds=ds_POSCAR(NEB.CONTCAR(p),TS.POSCAR(p));
+        ds=ds_POSCAR(EnergyPathway.CONTCAR(p),TS.POSCAR(p));
         if ds>ds_tol
             warning(sprintf(['The CONTCAR of the NEB do not match with the POSCAR of vibrational calculation in ', ...
                 path,variational,ldir(p).name,'.\nThere is a difference of ',num2str(ds,'%6.2e'),' Angstrom.']))
         end
     else
-        for q=1:length(NEB.CONTCAR)
-            ds(q)=ds_POSCAR(NEB.CONTCAR(q),TS.POSCAR);
+        for q=1:length(EnergyPathway.CONTCAR)
+            ds(q)=ds_POSCAR(EnergyPathway.CONTCAR(q),TS.POSCAR);
         end
         [minds,mindsidx]=min(ds);
         if minds>ds_tol
@@ -130,48 +128,33 @@ for p=1:n_lTS % Initial and final images have already been read.
     E=readEnergy([path,variational,ldir(p).name,'/'],'save',true);
     TS.E(p)=E(1);
     if ~isempty(variational)
-        dE=abs(TS.E(p)-NEB.energies(p,end));
+        dE=abs(TS.E(p)-EnergyPathway.energies(p,end));
         if dE>E_tol
             warning(sprintf(['There is a mismatch (of ',num2str(dE,'%8.3E'),' eV) between the energy values of the NEB ' ...
-                'calculation\n (for image ',num2str(p),') and that of the corresponding vibrational calculation']))
+                'calculation\n(for image ',num2str(p),') and that of the corresponding vibrational calculation']))
         end
-        TS.E_Fwd(p)=NEB.energies(p,end)-NEB.energies(1,end);
-        TS.E_Bwd(p)=NEB.energies(p,end)-NEB.energies(end,end);
+        TS.E_Fwd(p)=EnergyPathway.energies(p,end)-EnergyPathway.energies(1,end);
+        TS.E_Bwd(p)=EnergyPathway.energies(p,end)-EnergyPathway.energies(end,end);
     else
-        [minE,minEidx]=min(abs(TS.E-NEB.energies(:,end)));
+        [minE,minEidx]=min(abs(TS.E-EnergyPathway.energies(:,end)));
         if minE>E_tol
             warning(sprintf(['There is a mismatch (of ',num2str(minE,'%8.3E'),' eV) between the energy values of the NEB ' ...
-                'calculation\n (for image ',num2str(minEidx-1),') and that of the corresponding vibrational calculation']))
+                'calculation\n(for image ',num2str(minEidx-1),') and that of the corresponding vibrational calculation']))
         end
-        TS.E_Fwd=max(NEB.energies(:,end)-NEB.energies(1,end));
-        TS.E_Bwd=max(NEB.energies(:,end)-NEB.energies(end,end));
+        TS.E_Fwd=max(EnergyPathway.energies(:,end)-EnergyPathway.energies(1,end));
+        TS.E_Bwd=max(EnergyPathway.energies(:,end)-EnergyPathway.energies(end,end));
     end
 end
 
 % Reading of the vibrational frequencies and calculation of the zero-point energy of the slabs.
-nonTS=[];
 for p=1:n_lTS
-    nu=readFrequencies([path,variational,ldir(p).name,'/']);
-    if sum(nu==0)~=3
+    nu{p}=readFrequencies([path,variational,ldir(p).name,'/']);
+    if sum(nu{p}==0)~=3
         error('Severe problem found: there are fewer or more than three zero-frequency vibrational mode!')
-    elseif sum(nu<0)~=1
-        warning(['Vibration calculation of image ',num2str(p),' has no imaginary frequency, and will be ignored.'])
-        nonTS=[nonTS p];
-        TS.nu(p,:)=NaN*zeros(1,nDOF-4);
-        TS.nu_d(p)=NaN;
-        TS.ZPE(p)=NaN;
-        TS.delta_ZPE_Fwd(p)=NaN;
-        TS.delta_ZPE_Bwd(p)=NaN;
-    else
-        TS.nu(p,:)=nu(nu>0);
-        TS.nu_d=-nu(nu<0);
-        TS.ZPE(p)=ZPE([TS.nu(p,:)]);
-        TS.delta_ZPE_Fwd(p)=(TS.ZPE(p))-(s0.ZPE);
-        TS.delta_ZPE_Bwd(p)=(TS.ZPE(p))-(sf.ZPE);
     end
 end
-
 % Past this point everything is T-dependent (FOR LOOP)
+dispwarning=false(1,n_lTS);
 for p=1:length(T)
     % Calculation of the gas-related properties (total partition function, concentration, ...) given the input parameters
     gas=gas_modelling(press,V,T(p),molecules,concentrations);
@@ -179,8 +162,25 @@ for p=1:length(T)
     s0.Qv=Qv(s0.nu,T(p));
     sf.Qv=Qv(sf.nu,T(p));
     for q=1:n_lTS
+        [nu{q},nu_vib(p,q),nu_rot(p,q)]=VibRot_Freq(nu{q},[path,variational,ldir(q).name,'/'],T(p));
+        if sum(nu{q}==0)~=3
+            error('Severe problem found: there are fewer or more than three zero-frequency vibrational mode!')
+        elseif sum(nu{q}<0)<1
+            if ~dispwarning(q)
+                dispwarning(q)=true;
+                warning(['Vibration calculation of image ',num2str(q),' has no imaginary frequency, and will be ignored.'])
+            end
+            TS.nu(q,:)=NaN(1,nDOF-4);
+            TS.nu_d(q)=NaN;
+        else
+            TS.nu(q,:)=nu{q}(nu{q}>0);
+            TS.nu_d(q)=-nu{q}(nu{q}<0);
+        end
+        TS.ZPE(q)=ZPE([TS.nu(q,:)]);
+        TS.delta_ZPE_Fwd(q)=(TS.ZPE(q))-(s0.ZPE);
+        TS.delta_ZPE_Bwd(q)=(TS.ZPE(q))-(sf.ZPE);
         % Computation of the Skodje-Thrular coefficient to account for quantum tunneling through the energy barrier
-        if any((TS.E>NEB.energies(1,end)).*(TS.E>NEB.energies(end,end)))
+        if any((TS.E>EnergyPathway.energies(1,end)).*(TS.E>EnergyPathway.energies(end,end)))
             kappa_Fwd_var(p,q)=SkodjeTruhlar(T(p),TS.nu_d(q),TS.E_Fwd(q)*e);
             kappa_Bwd_var(p,q)=SkodjeTruhlar(T(p),TS.nu_d(q),TS.E_Bwd(q)*e);
         else
@@ -203,8 +203,8 @@ for p=1:length(T)
         A_Bwd_var(p,q)=A_gas_Bwd*kappa_Bwd_var(p,q)*(kB*T(p)/h)*Qv_div(TS.Qv(q,:),sf.Qv)*exp(-TS.delta_ZPE_Bwd(q)/(kB*T(p)));
         % The reaction rate coefficient (at the temperature T) is given by the product of the prefactor and the exponential of the 
         % energy barrier
-        k_Fwd_var(p,q)=A_Fwd_var(p,q)*exp(-max(NEB.energies(:,end)-NEB.energies(1,end))*e/(kB*T(p)));
-        k_Bwd_var(p,q)=A_Bwd_var(p,q)*exp(-max(NEB.energies(:,end)-NEB.energies(end,end))*e/(kB*T(p)));
+        k_Fwd_var(p,q)=A_Fwd_var(p,q)*exp(-max(EnergyPathway.energies(:,end)-EnergyPathway.energies(1,end))*e/(kB*T(p)));
+        k_Bwd_var(p,q)=A_Bwd_var(p,q)*exp(-max(EnergyPathway.energies(:,end)-EnergyPathway.energies(end,end))*e/(kB*T(p)));
     end
     [k_Fwd(p),idx_Fwd]=min(k_Fwd_var(p,:));
     [k_Bwd(p),idx_Bwd]=min(k_Bwd_var(p,:));
@@ -236,7 +236,6 @@ end
 % The function outputs a structure, containing almost every variable in an orderly fashion
 % First, all the input parameters are stored in the input field
 slashtrim=find(path(1:end-1)=='/');
-disp(slashtrim)
 if isempty(slashtrim)
     R_out.Input.Reaction_ID=path(1:end-1);
 else
@@ -257,7 +256,7 @@ R_out.gas=gas;
 % above for their precise definition
 R_out.TST.Reactants=s0;
 R_out.TST.Products=sf;
-R_out.TST.EnergyPathway=NEB;
+R_out.TST.EnergyPathway=EnergyPathway;
 R_out.TST.TS=TS;
 
 % Finally, the reaction rate coefficients and related parameters are stored. The energies are expressed in eV, the effective
