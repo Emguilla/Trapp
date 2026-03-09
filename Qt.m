@@ -1,6 +1,6 @@
 function Q=Qt(molecule,V,T)
 %==================================================================================================================================%
-% Qt.m: Calculation of the translational partition function (v0.2.1)
+% Qt.m: Calculation of the translational partition function (v0.2.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation
@@ -9,6 +9,8 @@ function Q=Qt(molecule,V,T)
 %       author: EYG             atomic masses
 %   version 0.2.1 (18/02/2026) - The mass of the molecule (in case of a POSCAR structure) was previously expressed in uma instead 
 %       contrib: EYG                of kilograms. This has been fixed. 
+%   version 0.2.2 (09/03/2026) - Periodic table is now read from a ".mat" file distinct from "constant_fund.mat".
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   molecule:   - character string: type of radical/molecule investigation (only H, H2, CH3 and CH4 are implemented)
@@ -17,7 +19,8 @@ function Q=Qt(molecule,V,T)
 %               reaction rate coefficient is expressed
 %   T:          Temperature in K
 %==================================================================================================================================%
-load('constant_fund.mat','kB','h','uma','ptable')
+load('constant_fund.mat','kB','h','uma');
+load('ptable.mat')
 if ischar(molecule) % Shortcut for common molecules
     switch molecule
         case 'H'

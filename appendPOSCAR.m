@@ -1,17 +1,19 @@
 function POSCAR=appendPOSCAR(POSCAR1,POSCAR2)
 %==================================================================================================================================%
-% appendPOSCAR.m:   Append a POSCAR structure to another (v0.1.1)
+% appendPOSCAR.m:   Append a POSCAR structure to another (v0.1.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (25/08/2025) - Creation
 %       author: EYG
 %   version 0.1.1 (29/11/2025) - Fix of the issue of the field constraint of POSCAR not being included in what was merged.
 %       contrib: EYG
+%   version 0.1.2 (09/03/2026) - Periodic table is now stored in the "ptable.mat" file and is no longer a part of the 
+%       contrib: EYG                "constant_fund.mat" file.
 %==================================================================================================================================%
 % args:
 %   POSCAR1, POSCAR2:   POSCAR structure
 %==================================================================================================================================%
-load('constant_fund.mat','ptable');
+load('ptable.mat')
 
 % The resulting POSCAR will inherit all the generic info from the POSCAR1 structure (header, cell, constraints, coordinates, ...)
 POSCAR.Title=POSCAR1.Title;

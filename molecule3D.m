@@ -1,6 +1,6 @@
 function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %==================================================================================================================================%
-% molecule3D.m: Draw 3D molecules (v2.3.2) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
+% molecule3D.m: Draw 3D molecules (v2.3.3) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
 %               (https://www.mathworks.com/matlabcentral/fileexchange/55231-molecule3d). Retrieved December 3, 2020.
 %==================================================================================================================================%
 % Version history:
@@ -36,6 +36,8 @@ function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %   version 2.3.2 (19/02/2026) - The duplication of the unit cell and its subsequent cuts are performed in subPOSCAR. In addition,
 %       contrib: EYG                the rendering can now be performed even in the event there are no distances below the bond 
 %                                   threshold.
+%   version 2.3.3 (09/03/2026) - The data related to the atoms and molecules is now generated (then stored) outside of molecule3D,
+%       contrib: EYG                to allow for modularity of these informations. 
 %==================================================================================================================================%
 % args:
 %   POSCAR:             POSCAR structure, or path+filename of a POSCAR file
@@ -70,98 +72,20 @@ function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %                           --> "liquorice": modeling using only sticks, no balls shown
 %                           --> "large": radii are twice as big as with the "ballstick" option 
 %==================================================================================================================================%
+load('ptable.mat')
 %==================================================================================================================================%
 % Parameters for the modeling : maximum interatomic distance, atoms colours and radii
 %==================================================================================================================================%
-% By default, if the interatomic distance is not set between a specific pair of atom, the bond will not be shown
-DBOND=zeros(118,118)*NaN;
-% Hydrogen
-DBOND(1,1)=0.8;DBOND(1,2:118)=1.25;
-% Lithium
-DBOND(3,3)=2.5;DBOND(3,8)=2.3;DBOND(3,22)=2.5;
-% Boron
-DBOND(5,6)=1.7;DBOND(5,7)=1.6;
-% Carbon
-DBOND(6,6)=1.8;DBOND(6,7)=1.7;DBOND(6,8)=1.8;DBOND(6,15)=1.7;DBOND(6,17)=1.8;
-% Oxygen
-DBOND(8,8)=1.5;DBOND(8,14)=2.6;DBOND(8,16)=1.8;DBOND(8,20)=2.6;DBOND(8,22)=2.6;
-% Sodium
-DBOND(11,11)=4;DBOND(11,17)=3;
-% Silicon
-DBOND(14,14)=2.6;
-% Sulfur
-DBOND(16,42)=2.7;DBOND(16,82)=3.4;
-% Titanium
-DBOND(22,22)=2.5;
-% Molybdenum
-DBOND(42,42)=2.7;
-
+DBOND=ptable.bond_length;
 % Set maximum bond distance 
 DBOND_MAX=max(DBOND(:)); 
 % Set maximum van der Waals bond distance between O and H
 DBOND_vdW_OH_MAX=2;
 
-% For practicality, make the distance matrix symetrical
-for p=1:118
-    for q=p:118
-        DBOND(q,p)=DBOND(p,q);
-    end
-end
+atcol=ptable.color;
 
-% Set colour for atoms and bonds (default for unknown atoms is purple-ish). The index of the line indicate the atomic number of the
-% element.
-atcol=ones(118,3).*[0.9 0.5 1.0];
-atcol(1,:)=[0.95 0.95 0.95];
-atcol(2,:)=[0.2 1.0 1.0];
-atcol(3,:)=[0.5 0.1 1.0];
-atcol(4,:)=[0.1 0.5 0.1];
-atcol(5,:)=[58 163 45]/255;
-atcol(6,:)=[0.3 0.3 0.3];
-atcol(7,:)=[176 185 230]/255;
-atcol(8,:)=[1.0 0.1 0.1];
-atcol(9,:)=[0.2 0.9 0.2];
-atcol(10,:)=atcol(2,:);
-atcol(11,:)=atcol(3,:);
-atcol(12,:)=atcol(4,:);
-atcol(14,:)=[240 200 160]/255;
-atcol(15,:)=[1.0 0.6 0.2];
-atcol(16,:)=[0.9 0.9 0.2];
-atcol(17,:)=atcol(9,:);
-atcol(18,:)=atcol(2,:);
-atcol(19,:)=atcol(3,:);
-atcol(20,:)=[0.7 0.7 0.7];
-atcol(22,:)=[0.6 0.6 0.6];
-atcol(26,:)=[0.9 0.5 0.1];
-atcol(35,:)=[0.6 0.1 0.1];
-atcol(36,:)=atcol(2,:);
-atcol(37,:)=atcol(3,:);
-atcol(38,:)=atcol(4,:);
-atcol(42,:)=[115 173 193]/255;
-atcol(53,:)=[0.4 0.1 0.7];
-atcol(54,:)=atcol(2,:);
-atcol(55,:)=atcol(3,:);
-atcol(56,:)=atcol(4,:);
-atcol(82,:)=[87,89,97]/255;
-atcol(88,:)=atcol(4,:);
-
-% Set radius of atoms, considering either the van der Waals or covalent radius
-covrad=ones(118,1)*0.5;
-covrad(1)=0.2;
-covrad(5)=0.3;
-covrad(6)=0.3;
-covrad(7)=0.4;
-covrad(8)=0.35;
-covrad(11)=0.25;
-covrad(16)=0.3;
-covrad(17)=0.4;
-covrad(20)=0.5;
-covrad(42)=0.4;
-covrad(53)=0.6;
-vdwrad=ones(118,1)*1.8;
-vdwrad(1)=1.2;
-vdwrad(6)=1.7;
-vdwrad(8)=1.52;
-vdwrad(16)=1.52;
+covrad=ptable.covrad;
+vdwrad=ptable.vdwrad;
 %==================================================================================================================================%
 % Handling of the mandatory parameters
 %==================================================================================================================================%

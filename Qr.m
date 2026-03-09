@@ -1,6 +1,6 @@
 function Q=Qr(molecule,T)
 %==================================================================================================================================%
-% Qt.m: Calculation of the rotational partition function (v0.2.1)
+% Qt.m: Calculation of the rotational partition function (v0.2.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation
@@ -9,13 +9,16 @@ function Q=Qr(molecule,T)
 %       author: EYG            POSCAR structure
 %   version 0.2.1 (18/02/2026) - Added an error case when entering an unknown molecules, and handling the case of the hydrogen
 %       contrib: EYG                radical
+%   version 0.2.2 (09/03/2026) - Periodic table is now read from a ".mat" file distinct from "constant_fund.mat".
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   molecule:   - character string:   type of radical/molecule investigation (only H2, CH3 and CH4 are implemented)
 %               - POSCAR structure:   Can be used for larger CH molecules /!\ experimental /!\
 %   T:          Temperature in K
 %==================================================================================================================================%
-load('constant_fund.mat','kB','uma','hbar','ptable');
+load('constant_fund.mat','kB','uma','hbar');
+load('ptable.mat')
 % average mass of the hydrogen and carbon atoms
 mH=ptable.mass(1)*uma;
 mC=ptable.mass(6)*uma;

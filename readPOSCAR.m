@@ -34,7 +34,7 @@ function POSCAR=readPOSCAR(filename)
 ldir=dir(filename);
 
 % Load periodic table to add masses to POSCAR structures
-load('constant_fund.mat','ptable');
+load('ptable.mat','ptable');
 
 % Loop over all the files that matches the pattern of filename
 for r=1:length(ldir)
