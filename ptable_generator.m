@@ -80,7 +80,7 @@ atcol(55,:)=atcol(3,:);
 atcol(56,:)=atcol(4,:);
 atcol(82,:)=[87,89,97]/255;
 atcol(88,:)=atcol(4,:);
-ptable.colors=atcol;
+ptable.color=atcol;
 
 % Set radius of atoms, considering either the van der Waals or covalent radius
 covrad=ones(118,1)*0.5;
