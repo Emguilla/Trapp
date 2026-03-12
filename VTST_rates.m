@@ -30,6 +30,9 @@ function R_out=VTST_rates(path,press,V,T,molecules,concentrations,gas_Fwd,gas_Bw
 %   gas_Bwd:        index of the molecule to be considered as part of the products (default: NaN)
 %==================================================================================================================================%
 % Debug parameters:
+% clear
+% close all
+% clc
 %     press=25e3;
 %     V=1e-6;
 %     T=1200;
