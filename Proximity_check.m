@@ -1,9 +1,12 @@
 function [POSCAR,bonds]=Proximity_check(POSCAR,varargin)
 %==================================================================================================================================%
-% Proximity_check.m:    Check distances between all possible pairs of atoms to identify and optionally modify their positions (v0.1)
+% Proximity_check.m:    Check distances between all possible pairs of atoms to identify and optionally modify their positions 
+%                       (v0.1.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (09/03/2026) - Creation
+%       author: EYG
+%   version 0.1.1 (12/03/2026) - Fix bug happening with the activation of the optional argument 'min'.
 %       author: EYG
 %==================================================================================================================================%
 % args:
@@ -19,7 +22,7 @@ load('ptable.mat')
 % Initialisation of the default parameters and handling of the optional arguments
 pushback=false;
 verbose=false;
-DBOND_MIN_ratio=ptable*bond_length;
+DBOND_MIN=ptable.bond_length;
 
 % Reading of the optional argument
 if exist('varargin','var')
