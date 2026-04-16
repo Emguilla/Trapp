@@ -16,21 +16,21 @@ if ischar(UC)
 end
 % Repetition of the POSCAR along "x" to generate a "line" of cells
 SC_x=UC;
-for px=1:nx
+for px=1:nx-1
     POSCAR=UC;
     POSCAR.positions=POSCAR.positions+px*POSCAR.vec(1,:);
     SC_x=appendPOSCAR(SC_x,POSCAR);
 end
 % Repetition of the POSCAR along "y" to generate a "plane" of cells
 SC_xy=SC_x;
-for px=1:ny
+for py=1:ny-1
     POSCAR=SC_x;
     POSCAR.positions=POSCAR.positions+py*POSCAR.vec(2,:);
     SC_xy=appendPOSCAR(SC_xy,POSCAR);
 end
 % Repetition of the POSCAR along "z" to generate a "volume" of cells, i.e. the supercell
 SC=SC_xy;
-for px=1:nz
+for pz=1:nz-1
     POSCAR=SC_xy;
     POSCAR.positions=POSCAR.positions+pz*POSCAR.vec(3,:);
     SC=appendPOSCAR(SC,POSCAR);
