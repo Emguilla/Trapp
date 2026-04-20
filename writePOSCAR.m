@@ -9,6 +9,8 @@ function writePOSCAR(POSCAR,filename,varargin)
 %       author: EYG
 %   version 0.3 (21/12/2025) - Fix of the bug that miswrite the number of each chemical element.
 %       author: EYG
+%   version 0.4 (20/04/2026) - By default, positions are written in cartesian coordinates, but now user has the option to write in 
+%       author: EYG             direct coordinates.
 %==================================================================================================================================%
 % args:
 %   POSCAR:     POSCAR structure to be written
@@ -18,12 +20,18 @@ function writePOSCAR(POSCAR,filename,varargin)
 %==================================================================================================================================%
 % Initialisation of the default parameters
 sort_opt=true;
+POSCAR.coord.Cartesian=true;
+POSCAR.coord.Direct=false;
 % Reading of the optional argument
 if exist('varargin','var')
     for p=1:2:length(varargin)
         switch lower(varargin{p})
             case 'sort'
                 sort_opt=varargin{p+1};
+            case 'xred'
+                xred=varargin{p+1};
+                POSCAR.coord.Cartesian=false;
+                POSCAR.coord.Direct=true;
         end
     end
 end
@@ -64,24 +72,38 @@ fprintf(fid,'\n');
 for p=1:length(POSCAR.chemicals)
     fprintf(fid,'  %3d',POSCAR.n_chemicals(p));
 end
+% Writing selective dynamics if relevant
+if POSCAR.Selective_dynamics
+    fprintf(fid,'\nSelective Dynamics');
+end
 % Writing of the constraints or type of coordinates (direct or cartesian) and the positions of the atoms
-if POSCAR.Selective_dynamics==true
-    fprintf(fid,'\nSelective Dynamics\n');
-    fprintf(fid,'Cartesian');
+if POSCAR.coord.Cartesian
+    fprintf(fid,'\nCartesian\n');
     for p=1:sum(POSCAR.n_chemicals)
         fprintf(fid,'\n %10.6f %10.6f %10.6f',POSCAR.positions(p,:));
-        for q=1:3
-            if POSCAR.constraint(p,q)==true
-                fprintf(fid,' T');
-            else
-                fprintf(fid,' F');
+        if POSCAR.Selective_dynamics % Writing constraint if any
+            for q=1:3
+                if POSCAR.constraint(p,q)==true
+                    fprintf(fid,' T');
+                else
+                    fprintf(fid,' F');
+                end
             end
         end
     end
-else
-    fprintf(fid,'\nCartesian\n');
+elseif POSCAR.coord.Direct
+    fprintf(fid,'\nDirect\n');
     for p=1:sum(POSCAR.n_chemicals)
-        fprintf(fid,' %10.6f %10.6f %10.6f\n',POSCAR.positions(p,:));
+        fprintf(fid,' %10.6f %10.6f %10.6f\n',POSCAR.xred(p,:));
+        if POSCAR.Selective_dynamics % Writing constraint if any
+            for q=1:3
+                if POSCAR.constraint(p,q)==true
+                    fprintf(fid,' T');
+                else
+                    fprintf(fid,' F');
+                end
+            end
+        end
     end
 end
 fclose(fid);
