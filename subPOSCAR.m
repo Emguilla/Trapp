@@ -7,6 +7,8 @@ function POSCAR=subPOSCAR(POSCAR,idx,varargin)
 %       author: EYG
 %   version 0.2 (19/02/2026) - Add an optional argument to define the subPOSCAR with respect to the positions of the atoms in terms
 %       author: EYG             of the unit cell vectors. This new optional argument, when activated, superseeds the idx argument.
+%   version 0.2.1 (23/04/2026) - Reduced coordinates were not properly define when replicating the cell. This has been fixed now.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   POSCAR:     POSCAR structure
@@ -41,7 +43,7 @@ else
                 if ~(p==0&&q==0&&r==0)
                     POSCAR_tmp=POSCAR_init;
                     POSCAR_tmp.positions=POSCAR_tmp.positions+p*POSCAR.vec(1,:)+q*POSCAR.vec(2,:)+r*POSCAR.vec(3,:);
-                    POSCAR_tmp.xred=POSCAR.xred+p+q+r;
+                    POSCAR_tmp.xred=POSCAR.xred+[p q r];
                     POSCAR=appendPOSCAR(POSCAR,POSCAR_tmp);
                 end
             end
