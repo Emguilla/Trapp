@@ -1,6 +1,6 @@
 function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %==================================================================================================================================%
-% molecule3D.m: Draw 3D molecules (v2.3.3) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
+% molecule3D.m: Draw 3D molecules (v3.0) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
 %               (https://www.mathworks.com/matlabcentral/fileexchange/55231-molecule3d). Retrieved December 3, 2020.
 %==================================================================================================================================%
 % Version history:
@@ -38,6 +38,8 @@ function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %                                   threshold.
 %   version 2.3.3 (09/03/2026) - The data related to the atoms and molecules is now generated (then stored) outside of molecule3D,
 %       contrib: EYG                to allow for modularity of these informations. 
+%   version 3.0 (26/04/2026) - Volumetric data can now be plotted, with specific isovalues.
+%       author: EYG
 %==================================================================================================================================%
 % args:
 %   POSCAR:             POSCAR structure, or path+filename of a POSCAR file
@@ -71,8 +73,15 @@ function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %                           --> "van der Waals": use the van der Waals radii in a ball-and-stick representation
 %                           --> "liquorice": modeling using only sticks, no balls shown
 %                           --> "large": radii are twice as big as with the "ballstick" option 
+%                       'volumetric_data', followed by a rank-3 table. If activated, the volumetric_data is set to true.
+%                           (default: "none", and volumetric_data=false)
+%                       'isovalues', followed by an array containing the isovalues at which the volumetric data must be plotted.
+%                           (default: "min(Vol3D(:))+[10 50 90]*(max(Vol3D(:))-min(Vol3D(:)))"
+%                       'colormap', followed by a string to specify which colormap is wanted
+%                           (default: RYB colormap)
 %==================================================================================================================================%
 load('ptable.mat')
+load('colormaps.mat');
 %==================================================================================================================================%
 % Parameters for the modeling : maximum interatomic distance, atoms colours and radii
 %==================================================================================================================================%
@@ -103,23 +112,18 @@ end
 if ~exist('cLim','var')
     cLim=[0 1];
 end
-% Get the limit of the supercell
-cellLim=[floor(aLim(1)) ceil(aLim(2));floor(bLim(1)) ceil(bLim(2));floor(cLim(1)) ceil(cLim(2))];
-% In the event an atom sits on the boundary defined by XLim, YLim and ZLim, it and its periodic copy are shown. This is possible if
-% the windows of XLim, YLim and ZLim is slightly increased by a tolerance set by the tolpos variable.
-tolpos=1e-3;
-aLim=[aLim(1)-tolpos aLim(2)+tolpos];
-bLim=[bLim(1)-tolpos bLim(2)+tolpos];
-cLim=[cLim(1)-tolpos cLim(2)+tolpos];
 %==================================================================================================================================%
 % Initialisation of the default parameters and handling of the optional arguments
 %==================================================================================================================================%
 save=false;
 periodic=true;
 rotate_view_angle=[0 0];
+isovalues_set=false;
 default_view_angle=[19.5 9];
 multi_view=false;
+volumetric_data=false;
 verbose=false;
+clrmap=c_jet;
 lattice_vec3D=true;
 lattice_vec2D=false;
 supercell=false;
@@ -128,6 +132,7 @@ NS = 50; % Number of faces on the spheres
 NB = 50; % Number of faces on the cylinders
 lights=true;
 style='ballstick';
+clrmap=[0 0.4470 0.7410;0.9290 0.6940 0.1250;1 0 0];
 % Reading of the optional argument
 if exist('varargin','var')
     for p=1:2:length(varargin)
@@ -188,14 +193,66 @@ if exist('varargin','var')
                 end
             case 'style'
                 style=varargin{p+1};
-            otherwise 
+            case 'volumetric_data'
+                volumetric_data=true;
+                Vol3D=varargin{p+1};
+            case 'isovalues'
+                isovalues=varargin{p+1};
+                isovalues_set=true;
+            case 'colormap'
+                switch varargin{p+1}
+                    case 'parula'
+                        clrmap=c_parula;
+                    case 'turbo'
+                        clrmap=c_turbo;
+                    case 'hsv'
+                        clrmap=c_hsv;
+                    case 'hot'
+                        clrmap=c_hot;
+                    case 'cool'
+                        clrmap=c_cool;
+                    case 'spring'
+                        clrmap=c_spring;
+                    case 'summer'
+                        clrmap=c_summer;
+                    case 'autumn'
+                        clrmap=c_autumn;
+                    case 'winter'
+                        clrmap=c_winter;
+                    case 'gray'
+                        clrmap=c_gray;
+                    case 'bone'
+                        clrmap=c_bone;
+                    case 'copper'
+                        clrmap=c_copper;
+                    case 'pink'
+                        clrmap=c_pink;
+                    case 'sky'
+                        clrmap=c_sky;
+                    case 'abyss'
+                        clrmap=c_abyss;
+                    case 'jet'
+                        clrmap=c_jet;
+                end
+            otherwise
                 error('unknown optional argument')
         end
     end
 end
+if volumetric_data&&~isovalues_set
+    isovalues=min(Vol3D(:))+[0.10 0.50 0.90]*(max(Vol3D(:))-min(Vol3D(:)));
+end
 %==================================================================================================================================%
 % Computation of the position of the atoms within the boundary set by XLim, YLim, ZLim
 %==================================================================================================================================%
+% Get the limit of the supercell
+cellLim=[floor(aLim(1)) ceil(aLim(2));floor(bLim(1)) ceil(bLim(2));floor(cLim(1)) ceil(cLim(2))];
+% In the event an atom sits on the boundary defined by XLim, YLim and ZLim, it and its periodic copy are shown. This is possible if
+% the windows of XLim, YLim and ZLim is slightly increased by a tolerance set by the tolpos variable.
+tolpos=1e-3;
+aLim=[aLim(1)-tolpos aLim(2)+tolpos];
+bLim=[bLim(1)-tolpos bLim(2)+tolpos];
+cLim=[cLim(1)-tolpos cLim(2)+tolpos];
 % Duplication of the positions of the atoms in the neighboring periodical copies of the unit cell (with one unit cell outside of
 % the boundary set by XLim, YLim and ZLim). Doing so "brings back" into the unit cell all the atoms.
 POSCAR=subPOSCAR(POSCAR,NaN,'Lim',[aLim;bLim;cLim]);
@@ -203,6 +260,63 @@ POSCAR=subPOSCAR(POSCAR,NaN,'Lim',[aLim;bLim;cLim]);
 if verbose
     disp(['Rendering ',num2str(sum(POSCAR.n_chemicals)),' atoms from a ',num2str(sum(POSCAR_init.n_chemicals)),' atoms system'])
 end
+
+if volumetric_data
+    data=Vol3D;
+    data(end+1,:,:)=data(1,:,:);
+    data(:,end+1,:)=data(:,1,:);
+    data(:,:,end+1)=data(:,:,1);
+    SIZE_DATA=size(data)-1;
+    for p=1:SIZE_DATA(3)+1
+        data_transpose(:,:,p)=data(:,:,p)';
+    end
+    data=data_transpose;
+    % Computation of the surfaces of each isovalues
+    for p_iso=1:length(isovalues)
+        fv=isosurface(data,isovalues(p_iso));
+        fv.vertices=fv.vertices-1;
+        fv.vertices(:,1)=fv.vertices(:,1)/SIZE_DATA(1);
+        fv.vertices(:,2)=fv.vertices(:,2)/SIZE_DATA(2);
+        fv.vertices(:,3)=fv.vertices(:,3)/SIZE_DATA(3);
+        % Application of PBC
+        fv_init=fv;
+        for p=floor(aLim(1)):ceil(aLim(2))-1
+            for q=floor(bLim(1)):ceil(bLim(2))-1
+                for r=floor(cLim(1)):ceil(cLim(2))-1
+                    if ~(p==0&&q==0&&r==0)
+                        fv_tmp=fv_init;
+                        n_vertices=length(fv.vertices(:,1));
+                        fv.vertices=[fv.vertices;fv_tmp.vertices+[p q r]];
+                        fv.faces=[fv.faces;fv_tmp.faces+n_vertices];
+                    end
+                end
+            end
+        end
+        % Deletion of all the vertices that are beyond the boundaries set by XLim, YLim and ZLim
+        k=1;
+        rm_idx=[];
+        max_count=length(fv.vertices(:,1));
+        while k<max_count
+            cond_a_minus=fv.vertices(k,1)<aLim(1);
+            cond_a_plus=fv.vertices(k,1)>aLim(2);
+            cond_b_minus=fv.vertices(k,2)<bLim(1);
+            cond_b_plus=fv.vertices(k,2)>bLim(2);
+            cond_c_minus=fv.vertices(k,3)<cLim(1);
+            cond_c_plus=fv.vertices(k,3)>cLim(2);
+            boundary_logical=[cond_a_minus cond_a_plus cond_b_minus cond_b_plus cond_c_minus cond_c_plus];
+            if any(boundary_logical)
+                rm_idx=[rm_idx k];
+            end
+            k=k+1;
+        end
+        for p=1:length(fv.vertices(:,1))
+            fv.vertices(p,1:3)=fv.vertices(p,1)*POSCAR.vec(1,:)+fv.vertices(p,2)*POSCAR.vec(2,:)+fv.vertices(p,3)*POSCAR.vec(3,:);
+        end
+        % Storage of the vertices and facets of each isovalues
+        vol3Dplot{p_iso}=fv;
+    end
+end
+
 %==================================================================================================================================%
 % Detect atom pairs to be displayed
 %==================================================================================================================================%
@@ -394,6 +508,25 @@ elseif lattice_vec2D
     yl=ylim;
     ylim([min([lattice_vertices_y(:);yl(1)]) max([lattice_vertices_y(:);yl(2)])])
 end
+% Plot of volumetric data
+if volumetric_data
+    if length(isovalues)>1
+        scol=linspace(0,1,length(isovalues));
+        salpha=linspace(0.25,1,length(isovalues));
+        sgrad=linspace(0,1,length(clrmap(:,1)));
+        colgrad_R=interp1(sgrad,clrmap(:,1),scol);
+        colgrad_G=interp1(sgrad,clrmap(:,2),scol);
+        colgrad_B=interp1(sgrad,clrmap(:,3),scol);
+        colgrad=[colgrad_R' colgrad_G' colgrad_B'];
+    else
+        salpha=1;
+        colgrad=clrmap(end,:);
+    end
+    for p_iso=1:length(isovalues)
+        p2=patch(vol3Dplot{p_iso},'FaceColor',colgrad(p_iso,:),'EdgeColor','none','FaceAlpha',salpha(p_iso));
+    end
+end
+
 % Add lights
 if lights
     cl=camlight(0,0);
