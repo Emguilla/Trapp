@@ -1,6 +1,6 @@
 function writePOSCAR(POSCAR,filename,varargin)
 %==================================================================================================================================%
-% readPOSCAR.m: write a POSCAR MatLab structure in a file following VASP format (v0.3)
+% readPOSCAR.m: write a POSCAR MatLab structure in a file following VASP format (v0.4.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (02/12/2025) - Creation
@@ -11,6 +11,8 @@ function writePOSCAR(POSCAR,filename,varargin)
 %       author: EYG
 %   version 0.4 (20/04/2026) - By default, positions are written in cartesian coordinates, but now user has the option to write in 
 %       author: EYG             direct coordinates.
+%   version 0.4.1 (28/04/2026) - Correction of a bug where an extra empty line was written when writing a non selective dynamics
+%       contrib: EYG            POSCAR
 %==================================================================================================================================%
 % args:
 %   POSCAR:     POSCAR structure to be written
@@ -72,13 +74,14 @@ fprintf(fid,'\n');
 for p=1:length(POSCAR.chemicals)
     fprintf(fid,'  %3d',POSCAR.n_chemicals(p));
 end
+fprintf(fid,'\n');
 % Writing selective dynamics if relevant
 if POSCAR.Selective_dynamics
-    fprintf(fid,'\nSelective Dynamics');
+    fprintf(fid,'Selective Dynamics\n');
 end
 % Writing of the constraints or type of coordinates (direct or cartesian) and the positions of the atoms
 if POSCAR.coord.Cartesian
-    fprintf(fid,'\nCartesian\n');
+    fprintf(fid,'Cartesian');
     for p=1:sum(POSCAR.n_chemicals)
         fprintf(fid,'\n %10.6f %10.6f %10.6f',POSCAR.positions(p,:));
         if POSCAR.Selective_dynamics % Writing constraint if any
@@ -92,7 +95,7 @@ if POSCAR.coord.Cartesian
         end
     end
 elseif POSCAR.coord.Direct
-    fprintf(fid,'\nDirect\n');
+    fprintf(fid,'Direct');
     for p=1:sum(POSCAR.n_chemicals)
         fprintf(fid,' %10.6f %10.6f %10.6f\n',POSCAR.xred(p,:));
         if POSCAR.Selective_dynamics % Writing constraint if any
