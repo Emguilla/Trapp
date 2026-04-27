@@ -1,6 +1,6 @@
 function POSCAR=readPOSCAR(filename)
 %==================================================================================================================================%
-% readPOSCAR.m: Read of a POSCAR file from VASP and creation of a POSCAR structure file in MatLab (v0.6.1)
+% readPOSCAR.m: Read of a POSCAR file from VASP and creation of a POSCAR structure file in MatLab (v0.6.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation
@@ -25,6 +25,8 @@ function POSCAR=readPOSCAR(filename)
 %       author: EYG             allows for reading of multiple POSCAR at once.
 %   version 0.6.1 (05/02/2026) - Definition of the case of reading multiple POSCAR files to prevent reading of multiple XDATCAR
 %       contrib: EYG                files.
+%   version 0.6.2 (28/04/2026) - Correction of a minor bug happening when reading an XDATCAR file with changing lattice vectors.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   filename:   path + name of the file to be read as a POSCAR (works for CONTCAR and XDATCAR as well)
@@ -106,16 +108,29 @@ for r=1:length(ldir)
     while readmultiple
         % Reading of the positions of the atoms and the associated constraints
         if k_XDATCAR>1
-            fgetl(fid);
             Data=fgetl(fid);
-            if isempty(Data)||~strcmpi(Data(1),'D')
-                Data=fgetl(fid);
+            if isempty(Data)
+                readmultiple=false;
+            elseif Data==-1
+                readmultiple=false;
+            else
+                if ~strcmpi(Data(1:21),'Direct configuration=')
+                    Data=textscan(fid,'%f\n',1,'commentStyle','%');
+                    POSCAR.acell=Data{1};
+                    Data=textscan(fid,'%f %f %f\n',3,'commentStyle','%');
+                    POSCAR.vec=[Data{1} Data{2} Data{3}];
+                    Data=fgetl(fid);
+                    Data=fgetl(fid);
+                    Data=fgetl(fid);
+                end
+            end
+            if isempty(Data)
                 readmultiple=false;
             end
         end
         if readmultiple
             if POSCAR.Selective_dynamics==true
-                Data=textscan(fid,'%f %f %f %s %s %s',sum(POSCAR.n_chemicals),'commentStyle','%');
+                Data=textscan(fid,'%f %f %f %s %s %s\n',sum(POSCAR.n_chemicals),'commentStyle','%');
                 if isempty(Data{1})
                     readmultiple=false;
                 else
@@ -124,7 +139,7 @@ for r=1:length(ldir)
                 end
             % Reading of the positions of the atoms (no constraints found)
             else
-                Data=textscan(fid,'%f %f %f',sum(POSCAR.n_chemicals),'commentStyle','%');
+                Data=textscan(fid,'%f %f %f\n',sum(POSCAR.n_chemicals),'commentStyle','%');
                 if isempty(Data{1})
                     readmultiple=false;
                 else
