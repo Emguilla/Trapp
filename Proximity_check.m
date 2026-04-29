@@ -1,18 +1,22 @@
 function [POSCAR,bonds]=Proximity_check(POSCAR,varargin)
 %==================================================================================================================================%
 % Proximity_check.m:    Check distances between all possible pairs of atoms to identify and optionally modify their positions 
-%                       (v0.1.1)
+%                       (v0.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (09/03/2026) - Creation
 %       author: EYG
 %   version 0.1.1 (12/03/2026) - Fix bug happening with the activation of the optional argument 'min'.
 %       author: EYG
+%   version 0.2 (30/04/2026) - Removal of the recursive call for efficiency. The distances are only checked for different atoms, 
+%       author: EYG             this may change in future updates. Added an 'absmin' optional argument.
 %==================================================================================================================================%
 % args:
 %   POSCAR:             POSCAR structure, or path+filename of a POSCAR file
 %   opt. args:          'min', followed by the ratio wrt the maximum bond distance allowed between each pair of atoms. 
 %                           (default: 0.82)
+%                       'absmin', followed by the minimum distance between atoms. Does not apply to same-type atoms.
+%                           (default: 1)
 %                       'pushback', followed by true or false to specify whether pairs of too close atoms should be repelled.
 %                           (default: false)
 %                       'verbose', followed by true or false to display information about the rendering (timing and number of atoms)
@@ -23,6 +27,7 @@ load('ptable.mat')
 pushback=false;
 verbose=false;
 DBOND_MIN=ptable.bond_length;
+DBOND_MIN_abs=1;
 
 % Reading of the optional argument
 if exist('varargin','var')
@@ -31,6 +36,9 @@ if exist('varargin','var')
             case 'min'
                 DBOND_MIN_ratio=varargin{p+1};
                 DBOND_MIN=DBOND_MIN_ratio*DBOND_MIN;
+            case 'absmin'
+                DBOND_MIN_abs=varargin{p+1};
+                DBOND_MIN=DBOND_MIN_abs;
             case 'pushback'
                 pushback=varargin{p+1};
             case 'verbose'
@@ -52,46 +60,28 @@ Z=POSCAR.Z;
 k=1;
 ks_n=[];
 for p_ks=1:length(ks)
-    for pZ=unique(Z)
-        for qZ=unique(Z)
-            if Z(pairs(ks(p_ks),1))==pZ&&Z(pairs(ks(p_ks),2))==qZ
-                if ds(ks(p_ks))<DBOND_MIN(pZ,qZ)
-                    ks_n(k)=ks(p_ks);
-                    DBOND_update(k)=DBOND_MIN(pZ,qZ);
-                    k=k+1;
-                end
+    if ds(ks(p_ks))<DBOND_MIN(Z(pairs(ks(p_ks),1)),Z(pairs(ks(p_ks),2)))
+        if verbose
+            disp(['Atoms ',num2str(pairs(ks(p_ks),1)),' and ',num2str(pairs(ks(p_ks),2)),' are too close!'])
+        end
+        if pushback
+            if Z(pairs(ks(p_ks),1))<Z(pairs(ks(p_ks),2))
+                idx_A=1;
+                idx_B=2;
+            elseif Z(pairs(ks(p_ks),1))>Z(pairs(ks(p_ks),2))
+                idx_A=2;
+                idx_B=1;
             end
+            pos_A=POSCAR.positions(pairs(ks(p_ks),idx_A));
+            pos_B=POSCAR.positions(pairs(ks(p_ks),idx_B));
+            d=(pos_A-pos_B)/norm(pos_A-pos_B);
+            min_d=DBOND_MIN(Z(pairs(ks(p_ks),1)),Z(pairs(ks(p_ks),2)));
+            POSCAR.positions(pairs(ks(p_ks),idx_A))=POSCAR.positions(pairs(ks(p_ks),idx_B))+min_d*d;
         end
     end
 end
-
-% Optional displacement of atoms. The function is called recursively to ensure that displaced atoms are not displaced too close to
-% other atoms.
-if pushback
-    is_moved=false(Natoms,1);
-    for p=1:length(ks_n)
-        [~,Zmin]=min([Z(pairs(ks_n(p),:))]);
-        if ~is_moved(pairs(ks_n(p),Zmin))
-            r=POSCAR.positions(pairs(ks_n(p),:),:);
-            r1=r(Zmin,:);
-            r(Zmin,:)=[];
-            r2=r;
-            dr=(r1-r2)/norm((r1-r2))*DBOND_update(p);
-            if norm(r1-r2-dr)>1e-3
-                POSCAR.positions(pairs(ks_n(p),Zmin),:)=r2+dr;
-                if verbose
-                    disp(['changing distance between atoms ',num2str(pairs(ks_n(p),1)),' and ',num2str(pairs(ks_n(p),2)),' by moving atom ',num2str(pairs(ks_n(p),Zmin))])
-                end
-                is_moved(pairs(ks_n(p),Zmin))=true;
-            end
-        end
-    end
-    if any(is_moved)
-        for p=1:Natoms
-            POSCAR.xred(p,:)=(1/POSCAR.acell)*inv(POSCAR.vec')*POSCAR.positions(p,:)';
-        end
-        [POSCAR,~]=Proximity_check(POSCAR,'min',DBOND_MIN_ratio,'pushback',true);
-    end
+for p=1:Natoms
+    POSCAR.xred(p,:)=(1/POSCAR.acell)*inv(POSCAR.vec')*POSCAR.positions(p,:)';
 end
 
 bonds.idx=pairs(ks_n,:);
