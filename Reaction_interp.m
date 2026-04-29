@@ -1,6 +1,6 @@
 function R_out=Reaction_interp(R_in,n,varargin)
 %==================================================================================================================================%
-% Reaction_interp.m:    Interpolation of a reaction structure between each images (v0.3)
+% Reaction_interp.m:    Interpolation of a reaction structure between each images (v0.3.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (01/09/2025) - Creation
@@ -9,6 +9,8 @@ function R_out=Reaction_interp(R_in,n,varargin)
 %       author: EYG             has that degree of freedom set to true.
 %   version 0.3 (09/03/2026) - Add optional argument to repel atoms too close to each other using the "Proximity_check" function.
 %       author: EYG
+%   version 0.3.1 (30/04/2026) - Add optional argument to display output from the "Proximity_check" function (proximity warnings).
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   R_in:       Reaction structure or POSCAR array
@@ -19,9 +21,12 @@ function R_out=Reaction_interp(R_in,n,varargin)
 %                           (default: 0.82)
 %                       'pushback', followed by true or false to specify whether pairs of too close atoms should be repelled.
 %                           (default: false)
+%                       'verbose', followed by true or false to display information about the rendering (timing and number of atoms)
+%                           (default: false)
 %==================================================================================================================================%
 
 % Initialisation of the default parameters and handling of the optional arguments
+verbose=false;
 subNEB=false;
 pushback=false;
 DBOND_MIN_ratio=0.82;
@@ -32,6 +37,8 @@ if exist('varargin','var')
         switch lower(varargin{p})
             case 'min'
                 DBOND_MIN_ratio=varargin{p+1};
+            case 'verbose'
+                verbose=varargin{p+1};
             case 'pushback'
                 pushback=varargin{p+1};
             case 'idx'
@@ -73,13 +80,16 @@ if ~isfield(R_in,'POSCAR')
         [~,ds]=ds_POSCAR(R_in(k+1),R_in(k));
         % the positions between a set of position and the next are computed through an interpolation of the displacement vector
         for p=1:n+1
+            if verbose
+                disp(['Generating intermediate image ',num2str(p)])
+            end
             ki=ki+1;
             R_out(ki)=R_in(k);
             R_out(ki).constraint=R_out(1).constraint;
             R_out(ki).positions=R_in(k).positions-(p/(n+1))*ds;
             % Call to the proximity_check function to repel, if relevant, the pairs of atoms that are too close
             if pushback
-                [R_out(ki),~]=Proximity_check(R_out(ki),'min',DBOND_MIN_ratio,'pushback',pushback);
+                [R_out(ki),~]=Proximity_check(R_out(ki),'min',DBOND_MIN_ratio,'pushback',pushback,'verbose',verbose);
             end
             for p=1:sum(R_in(1).n_chemicals)
                 R_out(ki).xred(p,:)=(1/R_out(ki).acell)*inv(R_out(ki).vec')*R_out(ki).positions(p,:)';
@@ -89,10 +99,10 @@ if ~isfield(R_in,'POSCAR')
 else
     R_out.Title=R_in.Title;
     % Recursive call to get the POSCAR structure array case
-    R_out.POSCAR=Reaction_interp(R_in.POSCAR,n,'min',DBOND_MIN_ratio,'pushback',pushback);
-    R_out.CONTCAR=Reaction_interp(R_in.CONTCAR,n,'min',DBOND_MIN_ratio,'pushback',pushback);
+    R_out.POSCAR=Reaction_interp(R_in.POSCAR,n,'min',DBOND_MIN_ratio,'pushback',pushback,'verbose',verbose);
+    R_out.CONTCAR=Reaction_interp(R_in.CONTCAR,n,'min',DBOND_MIN_ratio,'pushback',pushback,'verbose',verbose);
     for q=1:length(R_in.energies(1,:))
-        R_out.XDATCAR(:,q)=Reaction_interp(R_in.XDATCAR(:,q),n,'min',DBOND_MIN_ratio,'pushback',pushback);
+        R_out.XDATCAR(:,q)=Reaction_interp(R_in.XDATCAR(:,q),n,'min',DBOND_MIN_ratio,'pushback',pushback,'verbose',verbose);
         ki=1;
         E(1,q)=R_in.energies(1,q);
         x(1,q)=R_in.reaction_coordinates(1,q);
