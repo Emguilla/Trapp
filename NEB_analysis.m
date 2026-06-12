@@ -1,6 +1,6 @@
 function EnergyPathway=NEB_analysis(varargin)
 %==================================================================================================================================%
-% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.2.2)
+% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.2.3)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (02/09/2025) - Creation using bits and pieces from my thesis works
@@ -19,6 +19,8 @@ function EnergyPathway=NEB_analysis(varargin)
 %       contrib: EYG            a warning.
 %   version 0.2.2 (02/03/2026) - Reading of files now occurs in the folders in the "ldir" list.
 %       contrib: EYG
+%   version 0.2.3 (12/06/2026) - Fix of the sanity check to ensure that all atoms moving during the reaction are free to move in 
+%       contrib: EYG                each image.
 %==================================================================================================================================%
 % args:
 %   opt. args:          'path', followed by the path to the NEB directory
@@ -238,15 +240,19 @@ if ~visual_only
     end
     
     % Additional sanity check on the constraint over the degree of freedom of moving atoms:
-    [x,ds_vec]=coordinate_mapping(XDATCAR,parametric_coordinates,projected_coordinates,projected_resolution);
-    ds_tot_atoms=zeros(n_atoms,1);
-    for p=1:length(ds_vec)
-        ds_tot_atoms=ds_tot_atoms+vecnorm(ds_vec{p}')';
-    end
-    for p=1:n_atoms
-        if any(~constraint(p,:))&&ds_tot_atoms(p)~=0
-            warning(sprintf(['Severe problem found: position of (moving) atom ',num2str(p),' has been frozen along at least one direction! Yet the atom is displaced by ',num2str(ds_tot_atoms(p),'%6.2e'),' Angstrom during the reaction!']))
+    if parametric_coordinates
+        [x,ds_vec]=coordinate_mapping(XDATCAR,parametric_coordinates,projected_coordinates,projected_resolution);
+        ds_tot_atoms=zeros(n_atoms,1);
+        for p=1:length(ds_vec)
+            ds_tot_atoms=ds_tot_atoms+vecnorm(ds_vec{p}')';
         end
+        for p=1:n_atoms
+            if any(~constraint(p,:))&&ds_tot_atoms(p)~=0
+                warning(sprintf(['Severe problem found: position of (moving) atom ',num2str(p),' has been frozen along at least one direction! Yet the atom is displaced by ',num2str(ds_tot_atoms(p),'%6.2e'),' Angstrom during the reaction!']))
+            end
+        end
+    else
+        [x,~]=coordinate_mapping(XDATCAR,parametric_coordinates,projected_coordinates,projected_resolution);
     end
 
     % Restructuring of the relevant data into a structure
