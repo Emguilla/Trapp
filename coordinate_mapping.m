@@ -1,13 +1,15 @@
 function [x,ds_vec]=coordinate_mapping(XDATCARs,parametric_coordinates,projected_coordinates,projected_resolution)
 %==================================================================================================================================%
 % coordinate_mapping.m: computation of the reaction coordinates of the POSCAR structure matrix corresponding to an ensemble of 
-%                       XDATCAR files (v0.2)
+%                       XDATCAR files (v0.2.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (11/09/2025) - Creation
 %       author: EYG
 %   version 0.2 (16/02/2026) - The ds_vec matrix is also returned as output (to further track atoms movement)
 %       author: EYG
+%   version 0.2.1 (12/06/2026) - When defaulting to the positions to find the median image, the choice is set to whatever image is
+%       contrib: EYG                the farther away from either end of the band of image.
 %==================================================================================================================================%
 % args:
 %   XDATCARs:   Matrix of POSCAR structures 
@@ -55,7 +57,7 @@ elseif projected_coordinates
                 Bwd_ds(p)=ds_POSCAR(XDATCARs(end,1),XDATCARs(p,1));
             end
         end
-        [~,idx_max_ds]=max(Bwd_ds+Fwd_ds);
+        [~,idx_max_ds]=max(max(Bwd_ds+Fwd_ds)-(Bwd_ds.^2+(1-Fwd_ds).^2));
         pseudoTS=XDATCARs(idx_max_ds,end);
         warning(sprintf(['It is proferable to provide a guess of the intermediate configuration\n' ...
             'geometry in order to find the projected coordinate\n' ...
