@@ -12,7 +12,9 @@ function writePOSCAR(POSCAR,filename,varargin)
 %   version 0.4 (20/04/2026) - By default, positions are written in cartesian coordinates, but now user has the option to write in 
 %       author: EYG             direct coordinates.
 %   version 0.4.1 (28/04/2026) - Correction of a bug where an extra empty line was written when writing a non selective dynamics
-%       contrib: EYG            POSCAR
+%       contrib: EYG                POSCAR
+%   version 0.4.2 (23/06/2026) - Correction of a bug for which a line skip was missing when writing the POSCAR in direct 
+%       contrib: EYG                coordinates
 %==================================================================================================================================%
 % args:
 %   POSCAR:     POSCAR structure to be written
@@ -97,7 +99,7 @@ if POSCAR.coord.Cartesian
 elseif POSCAR.coord.Direct
     fprintf(fid,'Direct');
     for p=1:sum(POSCAR.n_chemicals)
-        fprintf(fid,' %10.6f %10.6f %10.6f\n',POSCAR.xred(p,:));
+        fprintf(fid,'\n %10.6f %10.6f %10.6f',POSCAR.xred(p,:));
         if POSCAR.Selective_dynamics % Writing constraint if any
             for q=1:3
                 if POSCAR.constraint(p,q)==true
