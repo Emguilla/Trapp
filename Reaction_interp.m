@@ -11,6 +11,9 @@ function R_out=Reaction_interp(R_in,n,varargin)
 %       author: EYG
 %   version 0.3.1 (30/04/2026) - Add optional argument to display output from the "Proximity_check" function (proximity warnings).
 %       contrib: EYG
+%   version 0.4 (01/07/2026) - Reaction structures now contain a field related to the depth of each images. The plot now
+%       author: EYG             discriminates between parent and child images, which are shown in different colors in the plot. In
+%                               addition, depth of interpolated images are set to NaN.
 %==================================================================================================================================%
 % args:
 %   R_in:       Reaction structure or POSCAR array
@@ -57,6 +60,7 @@ if exist('varargin','var')
                 end
                 R_in.Forces=Forces;
                 R_in.MaxForces=R_in.MaxForces(idx,:);
+                R_in.ImDepth=R_in.ImDepth(idx,:);
         end
     end
 end
@@ -109,12 +113,17 @@ else
         for p=1:length(R_in.POSCAR)-1
             dE=R_in.energies(p+1,q)-R_in.energies(p,q);
             dx=R_in.reaction_coordinates(p+1,q)-R_in.reaction_coordinates(p,q);
+            ImDepth(ki)=R_in.ImDepth(p);
             for k=1:n+1
                 ki=ki+1;
                 E(ki,q)=R_in.energies(p,q)+(k/(n+1))*dE;
                 x(ki,q)=R_in.reaction_coordinates(p,q)+(k/(n+1))*dx;
+                if k>1||k<n+1
+                    ImDepth(ki)=NaN;
+                end
             end
         end
+        ImDepth(end)=0;
     end
     R_out.energies=E;
     R_out.reaction_coordinates=x;
@@ -122,5 +131,6 @@ else
     % recognize an interpolated reaction from an original
     R_out.Forces=NaN;
     R_out.MaxForces=NaN;
+    R_out.ImDepth=ImDepth;
 end
 end
