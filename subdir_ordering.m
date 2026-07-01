@@ -1,10 +1,12 @@
 function [ldir,lname,lsname]=subdir_ordering(dirpath)
 %==================================================================================================================================%
-% NEB_analysis.m:   Recursive navigation of NEB and subNEB directories (v0.1)
+% NEB_analysis.m:   Recursive navigation of NEB and subNEB directories (v0.1.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (01/07/2026) - Creation
 %       author: EYG
+%   version 0.1.1 (02/07/2026) - Add a recursive definition of the image depth
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   dirpath:        Location of the main directory
@@ -30,7 +32,7 @@ ldir(clear_idx)=[];
 % Generation of the list of directories as string of numbers
 for p=1:length(ldir)
     lname{p}=ldir(p).name;
-    image_depth{p}=0;
+    image_depth{p}=0; % Here we define the depth of the image. It is set to zero, then will be incremented with each recursive call
 end
 [ldir.image_depth]=image_depth{:};
 % Check how many padding zeros are present
@@ -45,6 +47,7 @@ if ~isempty(target_dir)
         clear lsubname
         % Recursive call to the function to analyse subNEB directories within subNEB directories
         [lsubdir,lsubname_tmp]=subdir_ordering(target_dir(p).name);
+        % Add one to the depth of the subNEB images
         for q=1:length(lsubdir)
             lsubdir(q).image_depth=lsubdir(q).image_depth+1;
         end
