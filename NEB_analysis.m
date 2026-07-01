@@ -1,6 +1,6 @@
 function EnergyPathway=NEB_analysis(varargin)
 %==================================================================================================================================%
-% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.2.3)
+% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.3)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (02/09/2025) - Creation using bits and pieces from my thesis works
@@ -16,11 +16,15 @@ function EnergyPathway=NEB_analysis(varargin)
 %                               titles of POSCAR structures are chosen to reflect the number of the images and the subNEB
 %                               calculation it originated from when relevant.
 %   version 0.2.1 (18/02/2026) - Deletion of the field "str_xticklab" from the EnergyPathway structure and correction of a typo in  
-%       contrib: EYG            a warning.
+%       contrib: EYG                a warning.
 %   version 0.2.2 (02/03/2026) - Reading of files now occurs in the folders in the "ldir" list.
 %       contrib: EYG
 %   version 0.2.3 (12/06/2026) - Fix of the sanity check to ensure that all atoms moving during the reaction are free to move in 
 %       contrib: EYG                each image.
+%   version 0.3 (01/07/2026) - This function is no longer recursive, the list of directories is generated recursively with the 
+%       author: EYG             "subdir_ordering" function. In addition, the images have now a depth (i.e. the number of subNEB
+%                               that were used to find them). This allows for an explicit discrimination between parent and child
+%                               images when plotting the energy profile.
 %==================================================================================================================================%
 % args:
 %   opt. args:          'path', followed by the path to the NEB directory
@@ -46,7 +50,7 @@ projected_resolution=0.001;
 subNEB=false;
 idx_up=[NaN NaN];
 filename='EP.mat';
-curr_dir=pwd;
+curr_dir=[pwd,'/'];
 verbose=false;
 postprocessing=false;
 halted_calculation=false;
@@ -102,16 +106,28 @@ if ~visual_only
     for p=1:10 % Format limitation: no more than 1e9 images (should be plenty enough)
         for q=0:9
             if exist(num2str(q,['%0',num2str(p),'i']),'dir')
-                Title=grep('INCAR','SYSTEM','fwd',0);
-                Title_idx=find(Title{1}=='=');
-                EnergyPathway.Title=strip(Title{1}((Title_idx(1)+1):end));
+                if exist('INCAR','file')
+                    Title=grep('INCAR','SYSTEM','fwd',0);
+                    Title_idx=find(Title{1}=='=');
+                    EnergyPathway.Title=strip(Title{1}((Title_idx(1)+1):end));
+                else
+                    EnergyPathway.Title='NEB';
+                end
                 format_dir=['%0',num2str(p),'i'];
             end
         end
     end
     % Find all directories containing endpoints and images, and reading of the energies, positions and forces for each iteration and
-    % each image
-    ldir=dir('0*');
+    % each image. This happen using the "subdir_ordering" function when subNEB is enabled.
+    if subNEB
+        [ldir,~,lsname]=subdir_ordering(path);
+    else
+        ldir=dir('0*');
+        for p=1:length(ldir)
+            image_depth{p}=0;
+        end
+        [ldir.image_depth]=image_depth{:};
+    end
     Title=grep([ldir(1).name,'/OUTCAR'],'SYSTEM','fwd',0);
     Title_idx=find(Title{1}=='=');
     EnergyPathway.Title=strip(Title{1}((Title_idx(1)+1):end));
@@ -206,39 +222,7 @@ if ~visual_only
         end
         tmp_str_xticklab{p}=num2str(p-1,format_dir);
     end
-    
-    % Recursive call to NEB_analysis to get subNEBs:
-    % All subNEB calculations should be put in a folder named "subNEB_" followed by the letter corresponding to the interval within
-    % which the subNEB was performed (e.g. "subNEB_C" if the subNEB ran between images in directories "02" and "03")
-    subdir=dir('subNEB_*');
-    subdir=subdir([subdir(:).isdir]);
-    if subNEB
-        if ~isempty(subdir)
-            for p=1:length(subdir)
-                cd(subdir(p).name)
-                if parametric_coordinates
-                    tmp_subrun=NEB_analysis('subNEB',subNEB);
-                    tmp_subrun.prefix_str_xticklab='';
-                    subrun(p)=tmp_subrun;
-                elseif projected_coordinates
-                    tmp_subrun=NEB_analysis('coordinates_mapping','projected','projected_resolution',projected_resolution,'subNEB',subNEB);
-                    tmp_subrun.prefix_str_xticklab='';
-                    subrun(p)=tmp_subrun;
-                end
-                if length(subdir(p).name)==8
-                    idx_up(p,:)=[double(subdir(p).name(end))-64 double(subdir(p).name(end))-63];
-                    subrun(p).prefix_str_xticklab=[subdir(p).name(end),'/'];
-                elseif length(subdir(p).name)==9
-                    idx_up(p,:)=[double(subdir(p).name(end-1))-64 double(subdir(p).name(end))-63];
-                    subrun(p).prefix_str_xticklab=[subdir(p).name(end-1:end),'/'];
-                end
-                cd(curr_dir)
-            end
-        else
-            subrun=NaN;
-        end
-    end
-    
+        
     % Additional sanity check on the constraint over the degree of freedom of moving atoms:
     if parametric_coordinates
         [x,ds_vec]=coordinate_mapping(XDATCAR,parametric_coordinates,projected_coordinates,projected_resolution);
@@ -263,56 +247,15 @@ if ~visual_only
     EnergyPathway.reaction_coordinates=x;
     EnergyPathway.Forces=Forces;
     EnergyPathway.MaxForces=MaxForces;
-%    EnergyPathway.str_xticklab=tmp_str_xticklab;
-    if subNEB
-        EnergyPathway.subrun=subrun;
-        for p=1:length(subdir)
-            EnergyPathway.subrun(p).idx_up=idx_up(p,:);
-        end
+    for p=1:length(ldir)
+        image_depth(p)=ldir(p).image_depth;
     end
+    EnergyPathway.ImDepth=image_depth;
     
     % Reconstruction of the main reaction structure
     k=0;
     kp=0;
-    if subNEB
-        while kp<length(EnergyPathway.POSCAR)
-            kp=kp+1;
-            k=k+1;
-            POSCAR(k)=EnergyPathway.POSCAR(kp);
-            POSCAR(k).Title=tmp_str_xticklab{kp};
-            CONTCAR(k)=EnergyPathway.CONTCAR(kp);
-            XDATCAR(k,1)=EnergyPathway.XDATCAR(kp,end);
-            energies(k,1)=EnergyPathway.energies(kp,end);
-            Forces{k,1}=EnergyPathway.Forces{kp,end};
-            MaxForces(k,1)=EnergyPathway.MaxForces(kp,end);
-            for q=1:length(subdir)
-                if EnergyPathway.subrun(q).idx_up(1)==kp
-                    for r=2:length(EnergyPathway.subrun(q).POSCAR)-1
-                        k=k+1;
-                        POSCAR(k)=EnergyPathway.subrun(q).POSCAR(r);
-                        CONTCAR(k)=EnergyPathway.subrun(q).CONTCAR(r);
-                        XDATCAR(k,1)=EnergyPathway.subrun(q).XDATCAR(r,end);
-                        energies(k,1)=EnergyPathway.subrun(q).energies(r,end);
-                        Forces{k,1}=EnergyPathway.subrun(q).Forces{r,end};
-                        MaxForces(k,1)=EnergyPathway.subrun(q).MaxForces(r,end);
-                        POSCAR(k).Title=[EnergyPathway.subrun(q).prefix_str_xticklab,EnergyPathway.subrun(q).POSCAR(r).Title];
-                    end
-                    kp=kp+EnergyPathway.subrun(q).idx_up(2)-EnergyPathway.subrun(q).idx_up(1)-1;
-                end
-            end
-        end
-        EnergyPathway.POSCAR=POSCAR;
-        EnergyPathway.CONTCAR=CONTCAR;
-        EnergyPathway.XDATCAR=XDATCAR;
-        EnergyPathway.energies=energies;
-        [EnergyPathway.reaction_coordinates,~]=coordinate_mapping(XDATCAR,parametric_coordinates,projected_coordinates,projected_resolution);
-        EnergyPathway.Forces=Forces;
-        EnergyPathway.MaxForces=MaxForces;
-        EnergyPathway=rmfield(EnergyPathway,'subrun');
-        if isfield('idx_up',EnergyPathway)
-            EnergyPathway=rmfield(EnergyPathway,'idx_up');
-        end
-    end
+
     if exist('EDIFFG','var')
         EnergyPathway.EDIFFG=EDIFFG;
     else
@@ -329,6 +272,15 @@ if ~visual_only
 end
 subNEB=false;
 cmap=colororder;
+
+% Generate labels for each image
+for p=1:length(lsname)
+    xlsname{p}=['x(',lsname{p},')'];
+end
+
+% To show the scale, the endpoint of the parent NEB are shown as equal to 0 and 1 respectively
+xlsname{1}=[xlsname{1},'=0'];
+xlsname{end}=[xlsname{end},'=1'];
 if postprocessing&&~subNEB&&length(EnergyPathway.XDATCAR(1,:))~=1
     % Figure 1: Evolution of the energy and reaction coordinate throughout the calculation
     figure;
@@ -377,18 +329,37 @@ if postprocessing&&~subNEB&&length(EnergyPathway.XDATCAR(1,:))~=1
     legend(str_legend,'Location','best')
     set(gca,'fontsize',12,'fontname','cambria math')
 elseif postprocessing&&~subNEB&&isscalar(EnergyPathway.XDATCAR(1,:)) % Case of a single iteration calculation
-    % Figure 1: Energy along the reaction coordinate
+    % Figure 1: Energy along the reaction coordinate. Parent images are shown in red, their child in yellow, their own child
+    % in cmap(EnergyPathway.ImDepth(1)+2,:)), etc ...
     figure;
-    plot(EnergyPathway.reaction_coordinates',EnergyPathway.energies'-EnergyPathway.energies(1),'.-','MarkerFaceColor',cmap(2,:),'MarkerEdgeColor',cmap(2,:),'MarkerSize',16,'LineWidth',2)
+    plot(EnergyPathway.reaction_coordinates',EnergyPathway.energies'-EnergyPathway.energies(1),'-','LineWidth',4)
+    hold on
+    for p=1:length(ldir)
+        plot(EnergyPathway.reaction_coordinates(p,end)',EnergyPathway.energies(p,end)'-EnergyPathway.energies(1),'.','MarkerFaceColor',cmap(EnergyPathway.ImDepth(p)+2,:),'MarkerEdgeColor',cmap(EnergyPathway.ImDepth(p)+2,:),'MarkerSize',32)
+    end
     xlim([0 1])
     grid on
     xlabel('Reaction coordinate')
+    clear str_xticklab
+    for p=1:length(EnergyPathway.POSCAR)
+        str_xticklab{p}=EnergyPathway.POSCAR(p).Title;
+    end
+    hold on
+    grid on
+    xlabel('Reaction coordinate x')
+    xticks(EnergyPathway.reaction_coordinates')
+    xticklabels(xlsname)
     ylabel('Energy')
     set(gca,'fontsize',12,'fontname','cambria math')
 
-    % Figure 2: Max force acting on the atoms of the system
+    % Figure 2: Max force acting on the atoms of the system. Parent images are shown in red, their child in yellow, their own child
+    % in cmap(EnergyPathway.ImDepth(1)+2,:)), etc ...
     figure;
-    h=bar(0:length(EnergyPathway.MaxForces)-1,EnergyPathway.MaxForces');
+    h=bar(0,EnergyPathway.MaxForces(1)','FaceColor',cmap(EnergyPathway.ImDepth(1)+2,:),'EdgeColor',cmap(EnergyPathway.ImDepth(1)+2,:));
+    hold on
+    for p=2:length(ldir)
+        bar(p-1,EnergyPathway.MaxForces(p)','FaceColor',cmap(EnergyPathway.ImDepth(p)+2,:),'EdgeColor',cmap(EnergyPathway.ImDepth(p)+2,:));
+    end
     set(get(h,'Parent'), 'YScale', 'log')
     ylim([min(EnergyPathway.MaxForces)/2 max(EnergyPathway.MaxForces)*2])
     clear str_xticklab
@@ -399,10 +370,11 @@ elseif postprocessing&&~subNEB&&isscalar(EnergyPathway.XDATCAR(1,:)) % Case of a
     grid on
     xlabel('Image number')
     xticks(0:length(EnergyPathway.MaxForces)-1)
-    xticklabels(str_xticklab)
+    xticklabels(lsname)
     ylabel('Maximum force acting on atoms')
     set(gca,'fontsize',12,'fontname','cambria math')
 end
 if isfield('str_xticklab',EnergyPathway)
     EnergyPathway=rmfield(EnergyPathway,'str_xticklab');
 end
+cd(curr_dir)
