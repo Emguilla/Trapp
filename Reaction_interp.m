@@ -1,6 +1,6 @@
 function R_out=Reaction_interp(R_in,n,varargin)
 %==================================================================================================================================%
-% Reaction_interp.m:    Interpolation of a reaction structure between each images (v0.3.1)
+% Reaction_interp.m:    Interpolation of a reaction structure between each images (v0.4)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (01/09/2025) - Creation
