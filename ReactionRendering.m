@@ -1,7 +1,7 @@
 function frames=ReactionRendering(R_in,aLim,bLim,cLim,varargin)
 %==================================================================================================================================%
 % ReactionRendering.m:  Render an animated or static 3D model of an atomic structure, with or without the corresponding energy 
-%                       profile (v0.3.2)
+%                       profile (v0.4)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (28/08/2025) - Creation
@@ -17,6 +17,9 @@ function frames=ReactionRendering(R_in,aLim,bLim,cLim,varargin)
 %       contrib: EYG                background color of the figure is set to white
 %   version 0.3.2 (26/11/2025) - The background is now set to white only when the file is saved. Otherwise, grey background.
 %       contrib: EYG
+%   version 0.4 (01/07/2026) - The new field "ImDepth" of Reaction structures is taken into account when plotting the energy 
+%       author: EYG             profile. The NaN depth are no longer shown as dots, and parent and child images are shown in
+%                               different colours
 %==================================================================================================================================%
 % args:
 %   R_in:               Array of reaction structures (or POSCAR structures)
@@ -35,6 +38,7 @@ function frames=ReactionRendering(R_in,aLim,bLim,cLim,varargin)
 % set default parameters
 EnergyProfile=true;
 save_data=false;
+quadview=false;
 gif_direction='infinite';
 lcolor=colororder;
 static=false;
@@ -51,6 +55,8 @@ if exist('varargin','var')
             case 'static'
                 static=true;
                 idxTS=varargin{p+1};
+            case 'quadview'
+                quadview=varargin{p+1};
             case 'rotate_view_angle'
                 default_view_angle=[0 0];
                 rotate_view_angle=varargin{p+1};
@@ -80,13 +86,28 @@ else
     else
         figure('Position', [200 120 1200 425])
     end
-    subplot(1,2,2);
-    plot(R_in(1).reaction_coordinates(:,end),R_in(1).energies(:,end)-E0,'.-','LineWidth',3,'color',lcolor(1,:),'MarkerSize',20,'MarkerFaceColor',lcolor(2,:),'MarkerEdgeColor',lcolor(2,:))
+    subplot(2,4,[3 4 7 8]);
+    % plot(R_in(1).reaction_coordinates(:,end),R_in(1).energies(:,end)-E0,'-','LineWidth',2,'color',lcolor(1,:))
+    plot(R_in(1).reaction_coordinates',R_in(1).energies'-E0,'-','LineWidth',2)
     hold on
+    for q=1:length(R_in.POSCAR)
+        if ~isnan(R_in(1).ImDepth(q))
+            plot(R_in(1).reaction_coordinates(q,end)',R_in(1).energies(q,end)'-E0,'.','MarkerFaceColor',lcolor(R_in(1).ImDepth(q)+2,:),'MarkerEdgeColor',lcolor(R_in(1).ImDepth(q)+2,:),'MarkerSize',16)
+        else
+            % plot(R_in(1).reaction_coordinates(q,end)',R_in(1).energies(q,end)'-E0,'.','MarkerFaceColor',[1 1 1]*0.25,'MarkerEdgeColor',[1 1 1]*0.5,'MarkerSize',8)
+        end
+    end
     box on
     grid on
     for p=2:n_dataset
-        plot(R_in(p).reaction_coordinates(:,end),R_in(p).energies(:,end)-E0,'.','MarkerSize',20,'color',lcolor(p+1,:))
+        for q=1:length(R_in.POSCAR)
+            if ~isnan(R_in(p).ImDepth(q))
+                plot(R_in(p).reaction_coordinates(q,end)',R_in(p).energies(q,end)'-E0,'.','MarkerFaceColor',lcolor(R_in(p).ImDepth(q)+2,:),'MarkerEdgeColor',lcolor(R_in(p).ImDepth(q)+2,:),'MarkerSize',16)
+            else
+                % plot(R_in(p).reaction_coordinates(q,end)',R_in(p).energies(q,end)'-E0,'.','MarkerFaceColor',[1 1 1]*0.25,'MarkerEdgeColor',[1 1 1]*0.5,'MarkerSize',8)
+            end
+        end
+        % plot(R_in(p).reaction_coordinates(:,end),R_in(p).energies(:,end)-E0,'.','MarkerSize',20,'color',lcolor(p+1,:))
     end
     xlabel('Reaction coordinate')
     ylabel('Energy (eV)')
@@ -121,10 +142,19 @@ for p=1:n_images
 end
 CartLim=[xl;yl;zl]+[-0.5 0.5];
 % Rendering of the frame(s)
+view_ang(1,:)=default_view_angle+rotate_view_angle;
+view_ang(2:4,:)=[0 0; 0 90; 90 0];
 if static
     if EnergyProfile
-        subplot(1,2,1);
-        molecule3D(R_in(end).XDATCAR(idxTS,end),aLim,bLim,cLim,'rotate_view_angle',default_view_angle+rotate_view_angle)
+        if ~quadview
+            subplot(2,4,[1 2 5 6]);
+            molecule3D(R_in(end).XDATCAR(idxTS,end),aLim,bLim,cLim,'rotate_view_angle',default_view_angle+rotate_view_angle)
+        else
+            for q=1:4
+                subplot(2,4,q);
+                molecule3D(R_in(end).XDATCAR(idxTS,end),aLim,bLim,cLim,'rotate_view_angle',view_ang(q,:))
+            end
+        end
     else
         error(sprintf(['The static option is only meant to display an energy profile along with a 3D rendering of the model.\n...' ...
             'If you want a simple rendering of the model, please use molecule3D instead.']))
@@ -134,19 +164,37 @@ else
     for p=1:n_images
         fprintf(repmat('\b',1,nbytes))
         nbytes = fprintf('Rendering model %d out of %d\n', p, n_images);
-        if EnergyProfile
-            subplot(1,2,1);
+        if ~quadview
+            if EnergyProfile
+                subplot(2,4,[1 2 5 6]);
+            end
+            molecule3D(POSCARs(p),aLim,bLim,cLim,'lights','off','rotate_view_angle',default_view_angle+rotate_view_angle,'lattice_vec',lattice_vec)
+            % Add lights
+            cl=camlight(0,0);
+            % use the absolute limits of the rendering
+            xlim(CartLim(1,:))
+            ylim(CartLim(2,:))
+            zlim(CartLim(3,:))
+        else
+            idx_q=[1 2 5 6];
+            for q=1:4
+                if EnergyProfile
+                    subplot(2,4,idx_q(q));
+                else
+                    subplot(2,2,q);
+                end
+                molecule3D(POSCARs(p),aLim,bLim,cLim,'lights','off','rotate_view_angle',view_ang(q,:),'lattice_vec',lattice_vec)
+                % Add lights
+                cl=camlight(0,0);
+                % use the absolute limits of the rendering
+                xlim(CartLim(1,:))
+                ylim(CartLim(2,:))
+                zlim(CartLim(3,:))
+            end
         end
-        molecule3D(POSCARs(p),aLim,bLim,cLim,'lights','off','rotate_view_angle',default_view_angle+rotate_view_angle,'lattice_vec',lattice_vec)
-        % Add lights
-        cl=camlight(0,0);
-        % use the absolute limits of the rendering
-        xlim(CartLim(1,:))
-        ylim(CartLim(2,:))
-        zlim(CartLim(3,:))
         % only the "moving_pt" graphical object is updated, to track the energy of the 3D model currently rendered
         if EnergyProfile
-            subplot(1,2,2);
+            subplot(2,4,[3 4 7 8]);
             set(moving_pt, 'XData', R_in(end).reaction_coordinates(p,end), 'YData', R_in(end).energies(p,end)-E0);
         end
         % save current figure as a frame in a frame array
