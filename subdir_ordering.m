@@ -1,6 +1,6 @@
 function [ldir,lname,lsname]=subdir_ordering(dirpath)
 %==================================================================================================================================%
-% NEB_analysis.m:   Recursive navigation of NEB and subNEB directories (v0.1.1)
+% subdir_ordering.m:   Recursive navigation of NEB and subNEB directories (v0.1.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (01/07/2026) - Creation
