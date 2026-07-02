@@ -40,6 +40,8 @@ function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %       contrib: EYG                to allow for modularity of these informations. 
 %   version 3.0 (26/04/2026) - Volumetric data can now be plotted, with specific isovalues.
 %       author: EYG
+%   version 3.1 (02/07/2026) - Add optional argument to enable periodic boundary conditions on volumetric data, the default being 
+%       author: EYG             that the volumetric data is only shown in the lattice cell (previously PBCs were shown by default). 
 %==================================================================================================================================%
 % args:
 %   POSCAR:             POSCAR structure, or path+filename of a POSCAR file
@@ -121,6 +123,7 @@ rotate_view_angle=[0 0];
 isovalues_set=false;
 default_view_angle=[19.5 9];
 multi_view=false;
+VolPBC=false;
 volumetric_data=false;
 verbose=false;
 clrmap=c_jet;
@@ -196,6 +199,8 @@ if exist('varargin','var')
             case 'volumetric_data'
                 volumetric_data=true;
                 Vol3D=varargin{p+1};
+            case 'vol_pbc'
+                VolPBC=varargin{p+1};
             case 'isovalues'
                 isovalues=varargin{p+1};
                 isovalues_set=true;
@@ -279,15 +284,17 @@ if volumetric_data
         fv.vertices(:,2)=fv.vertices(:,2)/SIZE_DATA(2);
         fv.vertices(:,3)=fv.vertices(:,3)/SIZE_DATA(3);
         % Application of PBC
-        fv_init=fv;
-        for p=floor(aLim(1)):ceil(aLim(2))-1
-            for q=floor(bLim(1)):ceil(bLim(2))-1
-                for r=floor(cLim(1)):ceil(cLim(2))-1
-                    if ~(p==0&&q==0&&r==0)
-                        fv_tmp=fv_init;
-                        n_vertices=length(fv.vertices(:,1));
-                        fv.vertices=[fv.vertices;fv_tmp.vertices+[p q r]];
-                        fv.faces=[fv.faces;fv_tmp.faces+n_vertices];
+        if VolPBC
+            fv_init=fv;
+            for p=floor(aLim(1)):ceil(aLim(2))-1
+                for q=floor(bLim(1)):ceil(bLim(2))-1
+                    for r=floor(cLim(1)):ceil(cLim(2))-1
+                        if ~(p==0&&q==0&&r==0)
+                            fv_tmp=fv_init;
+                            n_vertices=length(fv.vertices(:,1));
+                            fv.vertices=[fv.vertices;fv_tmp.vertices+[p q r]];
+                            fv.faces=[fv.faces;fv_tmp.faces+n_vertices];
+                        end
                     end
                 end
             end
@@ -309,9 +316,11 @@ if volumetric_data
             end
             k=k+1;
         end
+        disp(rm_idx)
         for p=1:length(fv.vertices(:,1))
             fv.vertices(p,1:3)=fv.vertices(p,1)*POSCAR.vec(1,:)+fv.vertices(p,2)*POSCAR.vec(2,:)+fv.vertices(p,3)*POSCAR.vec(3,:);
         end
+        % fv.vertices(rm_idx,:)=[];
         % Storage of the vertices and facets of each isovalues
         vol3Dplot{p_iso}=fv;
     end
