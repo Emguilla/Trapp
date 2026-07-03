@@ -21,10 +21,9 @@ function RotorPreProcessing(path,POSCAR,vibidx,idx_origin,idx_n,idx_rotor,sigma,
 %   vibidx:     Index of the vibrational mode of interest, starting from the lowest frequencies.
 %   idx_origin: index (in the POSCAR structure) of the atom used as the anchor of the rotor adsorbate on the surface
 %   idx_n:      integer scalar - indices (in the POSCAR structure) of the second atom that defines, along with the anchor atom at 
-%                   the origin, the rotation axis of the adsorbate. 
-%               double array - cartesian coordinate of the vector to be used as the rotational axis
-%   idx_rotor:  indices (in the POSCAR structure) of all the atoms that are part of the rotor, including anchor and origin.
-%   sigma:      number of equivalent positions around a 360 rotation of the rotor (e.g., sigma of CH3 is equal to 3)
+%                   the origin, the rotation axis of the adsorbate.
+%   idx_rotor:      indices (in the POSCAR structure) of all the atoms that are part of the rotor, including anchor and origin.
+%   sigma:          number of equivalent positions around a 360 rotation of the rotor (e.g., sigma of CH3 is equal to 3)
 %   opt. args:          'quadview', followed by true or false to display 4 view angle at once
 %                           (default: false)
 %                       'rotate_view_angle', followed by a vector [theta,phi] to rotate the camera from its default direction
