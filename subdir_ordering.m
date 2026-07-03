@@ -7,6 +7,8 @@ function [ldir,lname,lsname]=subdir_ordering(dirpath)
 %       author: EYG
 %   version 0.1.1 (02/07/2026) - Add a recursive definition of the image depth
 %       contrib: EYG
+%   version 0.1.2 (03/07/2026) - The first and last image in the subNEB directories are removed only if a folder named "00" is
+%       contrib: EYG                present.
 %==================================================================================================================================%
 % args:
 %   dirpath:        Location of the main directory
@@ -51,9 +53,12 @@ if ~isempty(target_dir)
         for q=1:length(lsubdir)
             lsubdir(q).image_depth=lsubdir(q).image_depth+1;
         end
-        % Removal of the endpoints of the subNEB as they are the same as the one from the parent directory
-        lsubdir([1 end])=[];
-        lsubname_tmp([1 end])=[];
+        % Removal of the endpoints of the subNEB as they are the same as the one from the parent directory, only if the "00"
+        % directory exists
+        if str2double(lsubdir(1).name)==0
+            lsubdir([1 end])=[];
+            lsubname_tmp([1 end])=[];
+        end
         % The most common case for a subNEB is to run it between consecutive images. However, if you ran the subNEB by covering two
         % or three intervals (like BC between 01 and 03, skipping 02; or DEF between 03 and 06, skipping 04 and 05), then the 
         % intermediate(s) image(s) is(are) removed from the list.
