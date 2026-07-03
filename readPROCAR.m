@@ -10,7 +10,7 @@ count=0;
 
 % Header
 a=fgetl(fid);
-count=count+1;disp([' reading #',num2str(count,'%03i'),': ',a])
+% count=count+1;disp([' reading #',num2str(count,'%03i'),': ',a])
 END_OF_FILE=false;
 p=0;
 while ~END_OF_FILE
