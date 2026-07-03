@@ -25,6 +25,8 @@ function EnergyPathway=NEB_analysis(varargin)
 %       author: EYG             "subdir_ordering" function. In addition, the images have now a depth (i.e. the number of subNEB
 %                               that were used to find them). This allows for an explicit discrimination between parent and child
 %                               images when plotting the energy profile.
+%   version 0.3.1 (03/07/2026) - Minor fix, the subdir_ordering function was called with a target to 'path', but after the cd 
+%       contrib: EYG                command. Now it points to "./".
 %==================================================================================================================================%
 % args:
 %   opt. args:          'path', followed by the path to the NEB directory
@@ -120,13 +122,15 @@ if ~visual_only
     % Find all directories containing endpoints and images, and reading of the energies, positions and forces for each iteration and
     % each image. This happen using the "subdir_ordering" function when subNEB is enabled.
     if subNEB
-        [ldir,~,lsname]=subdir_ordering(path);
+        [ldir,~,lsname]=subdir_ordering('./');
     else
         ldir=dir('0*');
         for p=1:length(ldir)
             image_depth{p}=0;
+            lsname{p}=ldir(p).name;
         end
         [ldir.image_depth]=image_depth{:};
+        clear image_depth
     end
     Title=grep([ldir(1).name,'/OUTCAR'],'SYSTEM','fwd',0);
     Title_idx=find(Title{1}=='=');
