@@ -1,6 +1,6 @@
 function Freq=readFrequencies(path,varargin)
 %==================================================================================================================================%
-% readFrequencies.m: Extraction of the frequencies of a system from the output of HIVE (v0.3)
+% readFrequencies.m: Extraction of the frequencies of a system from the output of HIVE (v0.3.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation
@@ -11,6 +11,8 @@ function Freq=readFrequencies(path,varargin)
 %       contrib: EYG
 %   version 0.3 (26/02/2026) - Add an optional argument to specify the index of the vibrational mode of interest for the call to
 %       author: EYG             HIVE_analysis
+%   version 0.3.1 (07/07/2026) - The use of a previously processed save is restricted to cases where the OUTCAR is older.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   path:   Location of the directory where the PHONONOUT.hive file is stored
@@ -34,6 +36,12 @@ end
 % check if the OUTCAR file has already been processed. If not, use the home-made grep function for MatLab
 if ~exist([path,'PHONONOUT.hive'])
     HIVE_analysis(idx,'path',path);
+else
+    DatePHONONOUT=dir([path,'PHONONOUT.hive']);
+    DateOUTCAR=dir([path,'OUTCAR']);
+    if DatePHONONOUT.datenum<DateOUTCAR.datenum
+        HIVE_analysis(idx,'path',path);
+    end
 end
 grep([path,'PHONONOUT.hive'],')    ','prt',[path,'Freq_HIVE.dat']);
 

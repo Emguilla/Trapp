@@ -1,6 +1,6 @@
 function F=readForces(path,varargin)
 %==================================================================================================================================%
-% readForces.m: Extraction of the forces acting on a system from the raw output of VASP (v0.2.1)
+% readForces.m: Extraction of the forces acting on a system from the raw output of VASP (v0.2.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (28/08/2025) - Creation
@@ -8,6 +8,8 @@ function F=readForces(path,varargin)
 %   version 0.2 (11/09/2025) - The recording of the grep search is now optional, and default is no save
 %       author: EYG
 %   version 0.2.1 (02/03/2026) - Add a "/" if there is none at the end of the path to the OUTCAR file to be read.
+%       contrib: EYG
+%   version 0.2.2 (07/07/2026) - The use of a previously processed save is restricted to cases where the OUTCAR is older.
 %       contrib: EYG
 %==================================================================================================================================%
 % args:
@@ -31,6 +33,12 @@ n_atoms=sum(POSCAR.n_chemicals);
 % check if the OUTCAR file has already been processed. If not, use the home-made grep function for MatLab
 if ~exist([path,'Forces.dat'],'file')
     grep([path,'/OUTCAR'],'TOTAL-FORCE','fwd',n_atoms+3,'prt',[path,'/Forces.dat']);
+else
+    DateForces=dir([path,'Forces.dat']);
+    DateOUTCAR=dir([path,'OUTCAR']);
+    if DateForces.datenum<DateOUTCAR.datenum
+        grep([path,'/OUTCAR'],'TOTAL-FORCE','fwd',n_atoms+3,'prt',[path,'/Forces.dat']);
+    end
 end
 fid=fopen([path,'/Forces.dat']);
 GO=true;

@@ -1,6 +1,6 @@
 function F=readMaxForces(path,varargin)
 %==================================================================================================================================%
-% readEnergy.m: Extraction of the maximum force exerced on the atoms in the system from the raw output of VASP (v0.2.1)
+% readEnergy.m: Extraction of the maximum force exerced on the atoms in the system from the raw output of VASP (v0.2.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (28/08/2025) - Creation
@@ -8,6 +8,8 @@ function F=readMaxForces(path,varargin)
 %   version 0.2 (11/09/2025) - The recording of the grep search is now optional, and default is no save
 %       author: EYG
 %   version 0.2.1 (02/03/2026) - Add a "/" if there is none at the end of the path to the OUTCAR file to be read.
+%       contrib: EYG
+%   version 0.2.2 (07/07/2026) - The use of a previously processed save is restricted to cases where the OUTCAR is older.
 %       contrib: EYG
 %==================================================================================================================================%
 % args:
@@ -29,6 +31,12 @@ end
 % check if the OUTCAR file has already been processed. If not, use the home-made grep function for MatLab
 if ~exist([path,'MaxForces.dat'],'file')
     grep([path,'OUTCAR'],'RMS','fwd',0,'prt',[path,'MaxForces.dat']);
+else
+    DateMaxForces=dir([path,'MaxForces.dat']);
+    DateOUTCAR=dir([path,'OUTCAR']);
+    if DateMaxForces.datenum<DateOUTCAR.datenum
+        grep([path,'OUTCAR'],'RMS','fwd',0,'prt',[path,'MaxForces.dat']);
+    end
 end
 fid=fopen([path,'MaxForces.dat']);
 Data=fgetl(fid);
