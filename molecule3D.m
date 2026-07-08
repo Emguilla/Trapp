@@ -1,6 +1,6 @@
 function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %==================================================================================================================================%
-% molecule3D.m: Draw 3D molecules (v3.0) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
+% molecule3D.m: Draw 3D molecules (v3.1.1) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
 %               (https://www.mathworks.com/matlabcentral/fileexchange/55231-molecule3d). Retrieved December 3, 2020.
 %==================================================================================================================================%
 % Version history:
@@ -41,7 +41,9 @@ function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %   version 3.0 (26/04/2026) - Volumetric data can now be plotted, with specific isovalues.
 %       author: EYG
 %   version 3.1 (02/07/2026) - Add optional argument to enable periodic boundary conditions on volumetric data, the default being 
-%       author: EYG             that the volumetric data is only shown in the lattice cell (previously PBCs were shown by default). 
+%       author: EYG             that the volumetric data is only shown in the lattice cell (previously PBCs were shown by default).
+%   version 3.1.1 (08/07/2026) - Add check that a/b/cLim values are specified in increasing order.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   POSCAR:             POSCAR structure, or path+filename of a POSCAR file
@@ -104,15 +106,27 @@ vdwrad=ptable.vdwrad;
 if ischar(POSCAR)
     POSCAR=readPOSCAR(POSCAR);
 end
-% If the limits are not specified, default to [0;1]
+% If the limits are not specified, default to [0;1]. Also check that values are given in a increasing order
 if ~exist('aLim','var')
     aLim=[0 1];
+else
+    if aLim(1)>=aLim(2)
+        error('aLim values should be specified in increasing order!')
+    end
 end
 if ~exist('bLim','var')
     bLim=[0 1];
+else
+    if bLim(1)>=bLim(2)
+        error('bLim values should be specified in increasing order!')
+    end
 end
 if ~exist('cLim','var')
     cLim=[0 1];
+else
+    if cLim(1)>=cLim(2)
+        error('cLim values should be specified in increasing order!')
+    end
 end
 %==================================================================================================================================%
 % Initialisation of the default parameters and handling of the optional arguments
