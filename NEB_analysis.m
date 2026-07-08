@@ -1,6 +1,6 @@
 function EnergyPathway=NEB_analysis(varargin)
 %==================================================================================================================================%
-% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.3)
+% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.3.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (02/09/2025) - Creation using bits and pieces from my thesis works
@@ -27,6 +27,8 @@ function EnergyPathway=NEB_analysis(varargin)
 %                               images when plotting the energy profile.
 %   version 0.3.1 (03/07/2026) - Minor fix, the subdir_ordering function was called with a target to 'path', but after the cd 
 %       contrib: EYG                command. Now it points to "./".
+%   version 0.3.2 (08/07/2026) - The title field of the POSCAR structures are set to the corrsponding values of the ldir(:).name
+%       contrib: EYG                array.
 %==================================================================================================================================%
 % args:
 %   opt. args:          'path', followed by the path to the NEB directory
@@ -245,6 +247,9 @@ if ~visual_only
 
     % Restructuring of the relevant data into a structure
     EnergyPathway.POSCAR=POSCAR;
+    for p=1:length(POSCAR)
+        EnergyPathway.POSCAR(p).Title=ldir(p).name;
+    end
     EnergyPathway.CONTCAR=CONTCAR;
     EnergyPathway.XDATCAR=XDATCAR;
     EnergyPathway.energies=energies;
