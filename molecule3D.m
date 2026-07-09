@@ -1,6 +1,6 @@
 function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %==================================================================================================================================%
-% molecule3D.m: Draw 3D molecules (v3.1.1) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
+% molecule3D.m: Draw 3D molecules (v3.2) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
 %               (https://www.mathworks.com/matlabcentral/fileexchange/55231-molecule3d). Retrieved December 3, 2020.
 %==================================================================================================================================%
 % Version history:
@@ -44,6 +44,8 @@ function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %       author: EYG             that the volumetric data is only shown in the lattice cell (previously PBCs were shown by default).
 %   version 3.1.1 (08/07/2026) - Add check that a/b/cLim values are specified in increasing order.
 %       contrib: EYG
+%   version 3.2 (09/07/2026) - Bug fix for the optional arguments: if the entry is a string, it gets converted to a character array
+%       author: EYG
 %==================================================================================================================================%
 % args:
 %   POSCAR:             POSCAR structure, or path+filename of a POSCAR file
@@ -153,6 +155,12 @@ clrmap=[0 0.4470 0.7410;0.9290 0.6940 0.1250;1 0 0];
 % Reading of the optional argument
 if exist('varargin','var')
     for p=1:2:length(varargin)
+        if isstring(varargin{p})
+            varargin{p}=char(varargin{p});
+        end
+        if isstring(varargin{p+1})
+            varargin{p+1}=char(varargin{p+1});
+        end
         switch lower(varargin{p})
             case 'save'
                 save=true;
