@@ -1,6 +1,6 @@
 function EnergyPathway=NEB_analysis(varargin)
 %==================================================================================================================================%
-% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.3.2)
+% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.3.3)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (02/09/2025) - Creation using bits and pieces from my thesis works
@@ -29,6 +29,8 @@ function EnergyPathway=NEB_analysis(varargin)
 %       contrib: EYG                command. Now it points to "./".
 %   version 0.3.2 (08/07/2026) - The title field of the POSCAR structures are set to the corrsponding values of the ldir(:).name
 %       contrib: EYG                array.
+%   version 0.3.3 (17/07/2026) - Add check with respect to the presence of the VTST plugin in the VASP executable used to carry out
+%       contrib: EYG                the calculation.
 %==================================================================================================================================%
 % args:
 %   opt. args:          'path', followed by the path to the NEB directory
@@ -46,6 +48,7 @@ function EnergyPathway=NEB_analysis(varargin)
 %                           (default: false)
 %==================================================================================================================================%
 % set default and initial parameters
+verbose_MF=true;
 visual_only=false;
 save_data=false;
 parametric_coordinates=true;
@@ -147,7 +150,10 @@ if ~visual_only
             halted_calculation=true;
         end
         tmp_Forces{p}=readForces(ldir(p).name);
-        tmp_MaxForces{p}=readMaxForces(ldir(p).name);
+        tmp_MaxForces{p}=readMaxForces(ldir(p).name,'verbose',verbose_MF);
+        if isnan(tmp_MaxForces{p})
+            verbose_MF=false; %The warning only shows up once
+        end
         tmp_XDATCAR{p}=readPOSCAR([ldir(p).name,'/XDATCAR']);
         tmp_POSCAR(p)=readPOSCAR([ldir(p).name,'/POSCAR']);
         tmp_CONTCAR(p)=readPOSCAR([ldir(p).name,'/CONTCAR']);
@@ -237,8 +243,10 @@ if ~visual_only
             ds_tot_atoms=ds_tot_atoms+vecnorm(ds_vec{p}')';
         end
         for p=1:n_atoms
-            if any(~constraint(p,:))&&ds_tot_atoms(p)~=0
-                warning(sprintf(['Severe problem found: position of (moving) atom ',num2str(p),' has been frozen along at least one direction! Yet the atom is displaced by ',num2str(ds_tot_atoms(p),'%6.2e'),' Angstrom during the reaction!']))
+            if ~isnan(constraint)
+                if any(~constraint(p,:))&&ds_tot_atoms(p)~=0
+                    warning(sprintf(['Severe problem found: position of (moving) atom ',num2str(p),' has been frozen along at least one direction! Yet the atom is displaced by ',num2str(ds_tot_atoms(p),'%6.2e'),' Angstrom during the reaction!']))
+                end
             end
         end
     else
@@ -301,7 +309,7 @@ if postprocessing&&~subNEB&&length(EnergyPathway.XDATCAR(1,:))~=1
     end
     xlim([0 1])
     xlabel('Reaction coordinate')
-    ylabel('Energy')
+    ylabel('Energy (eV)')
     for p=1:length(EnergyPathway.POSCAR)-2
         str_legend{p}=['Image ',num2str(p)];
     end
@@ -358,30 +366,33 @@ elseif postprocessing&&~subNEB&&isscalar(EnergyPathway.XDATCAR(1,:)) % Case of a
     xlabel('Reaction coordinate x')
     xticks(EnergyPathway.reaction_coordinates')
     xticklabels(xlsname)
-    ylabel('Energy')
+    ylabel('Energy (eV)')
     set(gca,'fontsize',12,'fontname','cambria math')
 
     % Figure 2: Max force acting on the atoms of the system. Parent images are shown in red, their child in yellow, their own child
-    % in cmap(EnergyPathway.ImDepth(1)+2,:)), etc ...
-    figure;
-    h=bar(0,EnergyPathway.MaxForces(1)','FaceColor',cmap(EnergyPathway.ImDepth(1)+2,:),'EdgeColor',cmap(EnergyPathway.ImDepth(1)+2,:));
-    hold on
-    for p=2:length(ldir)
-        bar(p-1,EnergyPathway.MaxForces(p)','FaceColor',cmap(EnergyPathway.ImDepth(p)+2,:),'EdgeColor',cmap(EnergyPathway.ImDepth(p)+2,:));
+    % in cmap(EnergyPathway.ImDepth(1)+2,:)), etc ... This figure is only shown if the NEB calculation ran with a version of VASP
+    % that include the VTST plugin
+    if ~any(isnan(EnergyPathway.MaxForces))
+        figure;
+        h=bar(0,EnergyPathway.MaxForces(1)','FaceColor',cmap(EnergyPathway.ImDepth(1)+2,:),'EdgeColor',cmap(EnergyPathway.ImDepth(1)+2,:));
+        hold on
+        for p=2:length(ldir)
+            bar(p-1,EnergyPathway.MaxForces(p)','FaceColor',cmap(EnergyPathway.ImDepth(p)+2,:),'EdgeColor',cmap(EnergyPathway.ImDepth(p)+2,:));
+        end
+        set(get(h,'Parent'), 'YScale', 'log')
+        ylim([min(EnergyPathway.MaxForces)/2 max(EnergyPathway.MaxForces)*2])
+        clear str_xticklab
+        for p=1:length(EnergyPathway.POSCAR)
+            str_xticklab{p}=EnergyPathway.POSCAR(p).Title;
+        end
+        hold on
+        grid on
+        xlabel('Image number')
+        xticks(0:length(EnergyPathway.MaxForces)-1)
+        xticklabels(lsname)
+        ylabel('Maximum force acting on atoms')
+        set(gca,'fontsize',12,'fontname','cambria math')
     end
-    set(get(h,'Parent'), 'YScale', 'log')
-    ylim([min(EnergyPathway.MaxForces)/2 max(EnergyPathway.MaxForces)*2])
-    clear str_xticklab
-    for p=1:length(EnergyPathway.POSCAR)
-        str_xticklab{p}=EnergyPathway.POSCAR(p).Title;
-    end
-    hold on
-    grid on
-    xlabel('Image number')
-    xticks(0:length(EnergyPathway.MaxForces)-1)
-    xticklabels(lsname)
-    ylabel('Maximum force acting on atoms')
-    set(gca,'fontsize',12,'fontname','cambria math')
 end
 if isfield('str_xticklab',EnergyPathway)
     EnergyPathway=rmfield(EnergyPathway,'str_xticklab');
