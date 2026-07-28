@@ -1,7 +1,7 @@
 function [POSCARs,Freq]=HIVE_analysis(idx,varargin)
 %==================================================================================================================================%
 % HIVE_analysis.m:  Use of the HIVE program to get accurate frequencies and the POSCAR structures corresponding to the displacement
-%                   in the direction of a specific mode. (v0.2.5)
+%                   in the direction of a specific mode. (v0.2.6)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (27/08/2025) - Creation
@@ -19,9 +19,12 @@ function [POSCARs,Freq]=HIVE_analysis(idx,varargin)
 %                                   the location of the target folder
 %   version 0.2.5 (19/02/2026) - Correction to the limits of the rendering. Previously the atoms could get out of the field of view
 %       contrib: EYG                during the vibration displacement
+%   version 0.2.6 (17/07/2026) - Add the possibility to require all modes to be written out. The input file for HIVE is now written 
+%       contrib: EYG                by a separate function, that uses the new "clean3D" optional argument to clean rotational 
+%                                   modes. If left empty, idx defaults to "1" instead of the previous value of the 3N-th mode.
 %==================================================================================================================================%
 % args:
-%   idx:        index of the mode to analyse (in decreasing order of frequency magnitude)
+%   idx:        index of the mode to analyse (in decreasing order of frequency magnitude), or idx="all" to write all modes.
 %   opt. args:  'n_images', followed by the number of intermediate structures along the direction of the mode analysed 
 %                   (default: n_images=36)
 %               'path', followed by the path to the directory that contain the DYNMAT, OUTCAR and POSCAR files
@@ -32,6 +35,7 @@ function [POSCARs,Freq]=HIVE_analysis(idx,varargin)
 %               'rendering', followed by the boundaries of the rendering in a 2x3 array
 %                   (default: false)
 %==================================================================================================================================%
+clean3D=false;
 n_images=36;
 path='./';
 rendering=false;
@@ -39,6 +43,8 @@ save_data=false;
 if exist('varargin','var')
     for p=1:2:length(varargin)
         switch lower(varargin{p})
+            case 'clean3d'
+                clean3D=varargin{p+1};
             case 'n_images'
                 n_images=varargin{p+1};
             case 'path'
@@ -105,9 +111,6 @@ end
 if ~exist('DYNMAT','file')
     error('DYNMAT file is missing!')
 end
-if ~exist('idx','var')
-    idx=sum(POSCAR.n_chemicals);
-end
 
 % Remove older HIVE_analysis directory, if any
 if exist('HIVE_analysis','dir')
@@ -120,21 +123,11 @@ end
 
 cd HIVE_analysis
 % Create the inputphonon.dat file to set all the HIVE parameters
-fid=fopen('inputphonon.dat','w');
-fprintf(fid,'general:\n');
-fprintf(fid,'  datasource = VASP\n');
-fprintf(fid,'  ncores = 10\n');
-fprintf(fid,'  energy unit = THz\n');
-fprintf(fid,'  supercell = .false.\n');
-fprintf(fid,'  GammaPhonon = .TRUE.\n');
-fprintf(fid,'SpecialQpoint\n');
-fprintf(fid,'  singleQ = .TRUE.\n');
-fprintf(fid,'  singleQcoord = 0.0  0.0  0.0\n');
-fprintf(fid,['  writeQmodes = ',num2str(idx),'\n']);
-fprintf(fid,['  images = ',num2str(n_images),'\n']);
-fprintf(fid,'  writeDisplacement = .FALSE.\n');
-fclose(fid);
-
+if ischar(idx)||isnan(idx)
+    HIVE_input_generation('.',1,'clean3D',clean3D,'n_images',n_images)
+else
+    HIVE_input_generation('.',idx,'clean3D',clean3D,'n_images',n_images)
+end
 % Run the linux HIVE executable from MatLab via WSL and extract frequencies from PHONONOUT.hive
 [~,~]=system(['wsl -d ',WSL_distro,' hive3.exe phonons inputphonon.dat']);
 grep('PHONONOUT.hive',')    ','prt','Freq_HIVE.dat');
@@ -150,15 +143,30 @@ copyfile PHONONOUT.hive ..
 % HIVE standard output for the phonon calculation includes the POSCAR of the system along the direction of the vibrational mode
 % specified by idx. Each POSCAR_XXXXX_N.vasp is read and stored in an array of POSCAR structures. Note that since there is not
 % a standard format for the XXXXX part of the file names, a search from the end for the last underscore is first performed.
-ldir=dir('*.vasp');
-l=length(ldir(1).name);
-while ~strcmpi(ldir(1).name(l),'_')
-    l=l-1;
+if ischar(idx)
+    if strcmpi(idx,'all')
+        clear idx
+        idx=1:length(Freq);
+    else
+        error('Unknown char value for "idx" argument. Possible options: idx="all"')
+    end
 end
-for p=1:n_images
-    POSCARs(p)=readPOSCAR([ldir(p).name(1:l),num2str(p),'.vasp']);
+for q=1:length(idx)
+    tic
+    disp(idx(q))
+    HIVE_input_generation('.',idx(q),'clean3D',clean3D,'n_images',n_images)
+    [~,~]=system(['wsl -d ',WSL_distro,' hive3.exe phonons inputphonon.dat']);
+    ldir=dir('*.vasp');
+    l=length(ldir(1).name);
+    while ~strcmpi(ldir(1).name(l),'_')
+        l=l-1;
+    end
+    for p=1:n_images
+        POSCARs(q,p)=readPOSCAR([ldir(p).name(1:l),num2str(p),'.vasp']);
+    end
+    system(['wsl -d ',WSL_distro,' rm -rf *.vasp']);
+    toc
 end
-
 cd ..
 % clean the temporary folder
 [~,~]=system(['wsl -d ',WSL_distro,' rm -rf HIVE_analysis']);
