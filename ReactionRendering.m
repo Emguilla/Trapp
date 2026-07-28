@@ -1,7 +1,7 @@
 function frames=ReactionRendering(R_in,aLim,bLim,cLim,varargin)
 %==================================================================================================================================%
 % ReactionRendering.m:  Render an animated or static 3D model of an atomic structure, with or without the corresponding energy 
-%                       profile (v0.4)
+%                       profile (v0.4.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (28/08/2025) - Creation
@@ -20,6 +20,9 @@ function frames=ReactionRendering(R_in,aLim,bLim,cLim,varargin)
 %   version 0.4 (01/07/2026) - The new field "ImDepth" of Reaction structures is taken into account when plotting the energy 
 %       author: EYG             profile. The NaN depth are no longer shown as dots, and parent and child images are shown in
 %                               different colours
+%   version 0.4.1 (28/07/2026) - Add three optional arguments: 1) rendering of the structure from 4 viewing angle 
+%                                   simultaneously, 2) Setting energy limits for the graph, 3) define delay time between frame of
+%                                   the gif if 'save_data' is true.
 %==================================================================================================================================%
 % args:
 %   R_in:               Array of reaction structures (or POSCAR structures)
@@ -34,6 +37,11 @@ function frames=ReactionRendering(R_in,aLim,bLim,cLim,varargin)
 %                       Note: in that case, the reaction structure at the last position of the array must concern a single 
 %                               configuration.
 %                       'lattice_vec', followed by either "2D" or "3D" to specify the type of lattice vector to be displayed
+%                       'quad_view', followed by true or false to determine whether or not the structure should be displayed from 4
+%                           different viewing angles.
+%                       'ylim', followed by a 2-elements array providing the limit of the graph along the y-axis
+%                       'delay_time', followed by the delay time between two frames of the gif
+%                           (default: 0.05)
 %==================================================================================================================================%
 % set default parameters
 EnergyProfile=true;
@@ -45,6 +53,8 @@ static=false;
 rotate_view_angle=[0 0];
 default_view_angle=[19.5 9];
 lattice_vec=NaN;
+ELim_set=false;
+delay_time=0.05;
 % Reading of the optional argument
 if exist('varargin','var')
     for p=1:2:length(varargin)
@@ -62,6 +72,11 @@ if exist('varargin','var')
                 rotate_view_angle=varargin{p+1};
             case 'lattice_vec'
                 lattice_vec=varargin{p+1};
+            case 'ylim'
+                ELim_set=true;
+                ELim=varargin{p+1};
+            case 'delay_time'
+                delay_time=varargin{p+1};
         end
     end
 end
@@ -114,6 +129,9 @@ else
     set(gca,'fontsize',12,'fontname','cambria math')
     xticks(linspace(R_in(1).reaction_coordinates(1,end),R_in(1).reaction_coordinates(end,end),11))
     xticklabels({'Reactants','','','','','','','','','','Products'})
+    if ELim_set
+        ylim(ELim)
+    end
     if ~static
         moving_pt=plot(R_in(end).reaction_coordinates(1,end),R_in(end).energies(1,end)-E0,'.','MarkerSize',32,'color',lcolor(6,:));
     else
@@ -201,7 +219,6 @@ else
         M(p)=getframe(gcf);
     end
     if save_data
-        delay_time=0.05;
         % conversion of the frames into a GIF file
         frames2gif(M,'ReactionRendering',gif_direction,delay_time)
     end
