@@ -1,6 +1,6 @@
 function POSCAR=readPOSCAR(filename)
 %==================================================================================================================================%
-% readPOSCAR.m: Read of a POSCAR file from VASP and creation of a POSCAR structure file in MatLab (v0.6.2)
+% readPOSCAR.m: Read of a POSCAR file from VASP and creation of a POSCAR structure file in MatLab (v0.6.3)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation
@@ -27,6 +27,8 @@ function POSCAR=readPOSCAR(filename)
 %       contrib: EYG                files.
 %   version 0.6.2 (28/04/2026) - Correction of a minor bug happening when reading an XDATCAR file with changing lattice vectors.
 %       contrib: EYG
+%   version 0.6.3 (04/08/2026) - Returns an error when there is no "filename" in the target directory.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   filename:   path + name of the file to be read as a POSCAR (works for CONTCAR and XDATCAR as well)
@@ -34,10 +36,12 @@ function POSCAR=readPOSCAR(filename)
 
 % Find all files matching the pattern provided by "filename"
 ldir=dir(filename);
+if isempty(ldir)
+    error(['Attempt at reading ',filename,' failed: no such a file'])
+end
 
 % Load periodic table to add masses to POSCAR structures
 load('ptable.mat','ptable');
-
 % Loop over all the files that matches the pattern of filename
 for r=1:length(ldir)
     % Initialisation of the default parameters
@@ -197,4 +201,5 @@ for r=1:length(ldir)
         CONTCAR(r)=XDATCAR;
     end
 end
+
 POSCAR=CONTCAR;
