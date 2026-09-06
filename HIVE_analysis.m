@@ -1,7 +1,7 @@
 function [POSCARs,Freq]=HIVE_analysis(idx,varargin)
 %==================================================================================================================================%
 % HIVE_analysis.m:  Use of the HIVE program to get accurate frequencies and the POSCAR structures corresponding to the displacement
-%                   in the direction of a specific mode. (v0.2.6)
+%                   in the direction of a specific mode. (v0.3)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (27/08/2025) - Creation
@@ -22,6 +22,8 @@ function [POSCARs,Freq]=HIVE_analysis(idx,varargin)
 %   version 0.2.6 (17/07/2026) - Add the possibility to require all modes to be written out. The input file for HIVE is now written 
 %       contrib: EYG                by a separate function, that uses the new "clean3D" optional argument to clean rotational 
 %                                   modes. If left empty, idx defaults to "1" instead of the previous value of the 3N-th mode.
+%   version 0.3 (06/09/2026) - Add the possibility to save the POSCARs in a dedicated "POSCARs.mat" save file. Additional changes 
+%       author: EYG             were made to accomodate for the use of HIVE4 instead of HIVE3. 
 %==================================================================================================================================%
 % args:
 %   idx:        index of the mode to analyse (in decreasing order of frequency magnitude), or idx="all" to write all modes.
@@ -39,6 +41,7 @@ clean3D=false;
 n_images=36;
 path='./';
 rendering=false;
+save_POSCAR=false;
 save_data=false;
 if exist('varargin','var')
     for p=1:2:length(varargin)
@@ -51,6 +54,15 @@ if exist('varargin','var')
                 path=varargin{p+1};
                 if ~strcmpi(path(end),'/')&&~strcmpi(path(end),'\')
                     path=[path,'/'];
+                end
+            case 'save_poscar'
+                save_POSCAR=true;
+                if ischar(idx)
+                    if ~strcmpi(idx,'all')
+                        error('The "save_POSCAR" argument can only be used when analysing all modes for the first time.')
+                    end
+                else
+                    error('The "save_POSCAR" argument can only be used when analysing all modes for the first time.')
                 end
             case 'save_data'
                 save_data=true;
@@ -70,15 +82,21 @@ curr_dir=pwd;
 % In the event the hive3.exe file is not located on your Windows path (this is only a temporary change to your Windows path, it will
 % be reset upon restarting/shutting off).
 drive_letter='E'; % Pick the letter corresponding to that assigned to the USB key by your Windows installation (e.g. "E")
-WSL_distro='Ubuntu-22.04'; % name of your linux distro
+WSL_distro='Ubuntu'; % name of your linux distro
 old_path=getenv('PATH');
 if ~strcmpi(old_path(end),';')
     old_path(end+1)=';';
 end
 setenv('PATH',old_path);
-add_path='C:\Users\emgui\OneDrive-UNamur\Cluster;'; % Path to your local copy of the hive3.exe file, do not forget the ending ";"
-if ~exist([add_path(1:end-1),'/hive3.exe'],'file')
-    error('hive3.exe cannot be found in the specified path')
+
+% Path to your local copy of the hive3.exe file, do not forget the ending ";"
+add_path='C:\Users\emgui\OneDrive-UNamur\Bureau\Research\HIVE4.x-tools-dev\source\CommandLineInterface\bin\Release;'; 
+
+% % source variable within ubuntu
+% system(['wsl -d ',WSL_distro,' /home/emguilla/.bash_profile']);
+
+if ~exist([add_path(1:end-1),'/hive4.exe'],'file')
+    error('hive4.exe cannot be found in the specified path')
 end
 % If the Windows path already includes the path to your local copy of the hive3.exe file, nothing is added to the path.
 if contains(old_path,add_path(2:end-1))
@@ -117,19 +135,24 @@ if exist('HIVE_analysis','dir')
     system(['wsl -d ',WSL_distro,' rm -rf HIVE_analysis']);
 end
 
+if ischar(idx)
+    if exist('POSCARs.mat')&&save_POSCAR&&strcmpi(idx,'all')
+        error('A prior analysis has been performed in this directory. Please manually remove the "POSCARs.mat" file if this move was really intended')
+    end
+end
+
 % Create a new HIVE_analysis directory and copy the files inside
 [~,~]=system(['wsl -d ',WSL_distro,' mkdir HIVE_analysis']);
 [~,~]=system(['wsl -d ',WSL_distro,' cp POSCAR DYNMAT OUTCAR HIVE_analysis/.']);
-
 cd HIVE_analysis
 % Create the inputphonon.dat file to set all the HIVE parameters
-if ischar(idx)||isnan(idx)
+if ischar(idx)||any(isnan(idx))
     HIVE_input_generation('.',1,'clean3D',clean3D,'n_images',n_images)
 else
-    HIVE_input_generation('.',idx,'clean3D',clean3D,'n_images',n_images)
+    HIVE_input_generation('.',idx(1),'clean3D',clean3D,'n_images',n_images)
 end
 % Run the linux HIVE executable from MatLab via WSL and extract frequencies from PHONONOUT.hive
-[~,~]=system(['wsl -d ',WSL_distro,' hive3.exe phonons inputphonon.dat']);
+[~,~]=system(['wsl -d ',WSL_distro,' bash -c "source /home/emguilla/.bashrc && hive4.exe phonons inputphonon.dat"']);
 grep('PHONONOUT.hive',')    ','prt','Freq_HIVE.dat');
 % The value of the frequencies are extracted from the Freq_HIVE.dat file
 k=1;
@@ -147,27 +170,31 @@ if ischar(idx)
     if strcmpi(idx,'all')
         clear idx
         idx=1:length(Freq);
+        HIVE_input_generation('.','all','clean3D',clean3D,'n_images',n_images)
     else
         error('Unknown char value for "idx" argument. Possible options: idx="all"')
     end
+    [~,~]=system(['wsl -d ',WSL_distro,' bash -c "source /home/emguilla/.bashrc && hive4.exe phonons inputphonon.dat"']);
+else
+    for q=1:length(idx)
+        tic
+        HIVE_input_generation('.',idx(q),'clean3D',clean3D,'n_images',n_images)
+        [~,~]=system(['wsl -d ',WSL_distro,' bash -c "source /home/emguilla/.bashrc && hive4.exe phonons inputphonon.dat"']);
+        toc
+    end
 end
+q=1;
+nbytes = fprintf(['Reading SQ_PHONON_',num2str(length(Freq)-idx(q)+1)],' out of %d',length(idx));
 for q=1:length(idx)
-    tic
-    disp(idx(q))
-    HIVE_input_generation('.',idx(q),'clean3D',clean3D,'n_images',n_images)
-    [~,~]=system(['wsl -d ',WSL_distro,' hive3.exe phonons inputphonon.dat']);
-    ldir=dir('*.vasp');
-    l=length(ldir(1).name);
-    while ~strcmpi(ldir(1).name(l),'_')
-        l=l-1;
-    end
-    for p=1:n_images
-        POSCARs(q,p)=readPOSCAR([ldir(p).name(1:l),num2str(p),'.vasp']);
-    end
-    system(['wsl -d ',WSL_distro,' rm -rf *.vasp']);
-    toc
+    fprintf(repmat('\b',1,nbytes))
+    POSCARs(q,:)=readSQPHONON(['SQ_PHONON_',num2str(length(Freq)-idx(q)+1),'.hive']);
 end
+%system(['wsl -d ',WSL_distro,' rm -rf POSCARs']);
 cd ..
+if save_POSCAR&&length(idx)==length(Freq)
+    disp('Writing POSCARs ...')
+    save('POSCARs.mat','POSCARs')
+end
 % clean the temporary folder
 [~,~]=system(['wsl -d ',WSL_distro,' rm -rf HIVE_analysis']);
 % choose to render the vibrational mode (and save_data its rendering if requested)
