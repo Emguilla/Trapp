@@ -1,6 +1,6 @@
 function EnergyPathway=NEB_analysis(varargin)
 %==================================================================================================================================%
-% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.3.3)
+% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.3.4)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (02/09/2025) - Creation using bits and pieces from my thesis works
@@ -31,14 +31,25 @@ function EnergyPathway=NEB_analysis(varargin)
 %       contrib: EYG                array.
 %   version 0.3.3 (17/07/2026) - Add check with respect to the presence of the VTST plugin in the VASP executable used to carry out
 %       contrib: EYG                the calculation.
+%   version 0.3.4 (06/09/2026) - Modification of the way the xticklabels are defined. A loop now auto-detect "_", '/' and "\" to 
+%       contrib: EYG                extract the short-form of the path (i.e. "D/02" instead of the "subNEB_D/02" used as the title
+%                                   of the POSCARs. In addition, the number of digits on the x- and y-axes now have the same number 
+%                                   of digits.
 %==================================================================================================================================%
 % args:
+%   If a single EnergyPathway input is provided as an argument, this function only outputs visual akin to the result of the
+%   'post-processing' optional argument.
 %   opt. args:          'path', followed by the path to the NEB directory
 %                           (default: current directory)
 %                       'save_data', followed by the filename where the NEB structure must be saved
 %                           (default: nothing is saved)
 %                       'verbose', followed by true of false to specify whether text should be shown to indicate NEB parameters
 %                           (default: nothing is saved)
+%                       'post-processing', followed by true of false to render:
+%                           1) case of a static NEB calculation: energy profile and maximum force on the atoms;
+%                           2) case of a generic NEB calculation: evolution of the energy profile, maximum force acting on the atoms
+%                               (for each ionic iteration) and the energy difference between consecutive ionic iterations.
+%                           (default: nothing is shown)
 %                       'coordinates_mapping', followed by the type of calculation of the reaction coordinates (possible choices 
 %                           are 'parametric' or 'projected')
 %                           (default: parametric)
@@ -69,6 +80,9 @@ if exist('varargin','var')
             visual_only=true;
             postprocessing=true;
             EnergyPathway=varargin{1};
+            if length(varargin)>1
+                warning('An EnergyPathway-type of structure was used as an input. Further arguments will be ignored.')
+            end
         else
             switch lower(varargin{p})
                 case 'path'
@@ -79,10 +93,6 @@ if exist('varargin','var')
                 case 'save_data'
                     save_data=true;
                     filename=varargin{p+1};
-                case 'visual'
-                    visual_only=true;
-                    postprocessing=true;
-                    EnergyPathway=varargin{p+1};
                 case 'verbose'
                     verbose=varargin{p+1};
                 case 'postprocessing'
@@ -127,7 +137,7 @@ if ~visual_only
     % Find all directories containing endpoints and images, and reading of the energies, positions and forces for each iteration and
     % each image. This happen using the "subdir_ordering" function when subNEB is enabled.
     if subNEB
-        [ldir,~,lsname]=subdir_ordering('./');
+        [ldir,~,~]=subdir_ordering('./');
     else
         ldir=dir('0*');
         for p=1:length(ldir)
@@ -232,7 +242,6 @@ if ~visual_only
                 MaxForces(p,q)=tmp_MaxForces{p}(q);
             end
         end
-        tmp_str_xticklab{p}=num2str(p-1,format_dir);
     end
         
     % Additional sanity check on the constraint over the degree of freedom of moving atoms:
@@ -280,9 +289,6 @@ if ~visual_only
     end
     % save if requested
     if save_data
-        if isfield('str_xticklab',EnergyPathway)
-            EnergyPathway=rmfield(EnergyPathway,'str_xticklab');
-        end
         save(filename,'EnergyPathway')
     end
     cd(curr_dir)
@@ -291,8 +297,27 @@ subNEB=false;
 cmap=colororder;
 
 % Generate labels for each image
-for p=1:length(lsname)
-    xlsname{p}=['x(',lsname{p},')'];
+for p=1:length(EnergyPathway.POSCAR)
+    q=1;
+    str{p}='';
+    while q<=length(EnergyPathway.POSCAR(p).Title)
+        if ~isnan(str2double(EnergyPathway.POSCAR(p).Title(q:end)))
+            str{p}=[str{p} EnergyPathway.POSCAR(p).Title(q:end)];
+            q=length(EnergyPathway.POSCAR(p).Title);
+        elseif strcmpi(EnergyPathway.POSCAR(p).Title(q),'_')
+            q=q+1;
+            while ~strcmpi(EnergyPathway.POSCAR(p).Title(q),'/')&&~strcmpi(EnergyPathway.POSCAR(p).Title(q),'\')
+                str{p}=[str{p} EnergyPathway.POSCAR(p).Title(q)];
+                q=q+1;
+            end
+            str{p}=[str{p} '/'];
+        end
+        q=q+1;
+    end
+end
+
+for p=1:length(EnergyPathway.POSCAR)
+    xlsname{p}=['x(',str{p},')'];
 end
 
 % To show the scale, the endpoint of the parent NEB are shown as equal to 0 and 1 respectively
@@ -315,6 +340,24 @@ if postprocessing&&~subNEB&&length(EnergyPathway.XDATCAR(1,:))~=1
     end
     legend(str_legend,'Location','best')
     set(gca,'fontsize',12,'fontname','cambria math')
+    ytl=yticklabels();
+    for p=1:length(ytl)
+        fN(p)=0;
+        fd(p)=NaN;
+        for q=1:length(ytl{p})
+            if strcmpi(ytl{p}(q),'-')
+                fN(p)=0;
+            elseif strcmpi(ytl{p}(q),'.')
+                fd(p)=0;
+            elseif isnan(fd(p))
+                fN(p)=fN(p)+1;
+            else
+                fd(p)=fd(p)+1;
+            end
+        end
+    end
+    ax=gca;
+    ax.YAxis.TickLabelFormat=['%.',num2str(max(fd)),'f'];
 
     % Figure 2: Maximum force acting on the atoms of the systems for each ionic iteration
     figure;
@@ -351,24 +394,54 @@ elseif postprocessing&&~subNEB&&isscalar(EnergyPathway.XDATCAR(1,:)) % Case of a
     figure;
     plot(EnergyPathway.reaction_coordinates',EnergyPathway.energies'-EnergyPathway.energies(1),'-','LineWidth',4)
     hold on
-    for p=1:length(ldir)
+    for p=1:length(EnergyPathway.POSCAR)
         plot(EnergyPathway.reaction_coordinates(p,end)',EnergyPathway.energies(p,end)'-EnergyPathway.energies(1),'.','MarkerFaceColor',cmap(EnergyPathway.ImDepth(p)+2,:),'MarkerEdgeColor',cmap(EnergyPathway.ImDepth(p)+2,:),'MarkerSize',32)
     end
     xlim([0 1])
     grid on
     xlabel('Reaction coordinate')
-    clear str_xticklab
-    for p=1:length(EnergyPathway.POSCAR)
-        str_xticklab{p}=EnergyPathway.POSCAR(p).Title;
-    end
     hold on
     grid on
     xlabel('Reaction coordinate x')
-    xticks(EnergyPathway.reaction_coordinates')
-    xticklabels(xlsname)
+    xticks(linspace(min(EnergyPathway.reaction_coordinates),max(EnergyPathway.reaction_coordinates),11))
     ylabel('Energy (eV)')
     set(gca,'fontsize',12,'fontname','cambria math')
-
+    ytl=yticklabels();
+    for p=1:length(ytl)
+        fN(p)=0;
+        fd(p)=NaN;
+        for q=1:length(ytl{p})
+            if strcmpi(ytl{p}(q),'-')
+                fN(p)=0;
+            elseif strcmpi(ytl{p}(q),'.')
+                fd(p)=0;
+            elseif isnan(fd(p))
+                fN(p)=fN(p)+1;
+            else
+                fd(p)=fd(p)+1;
+            end
+        end
+    end
+    ax=gca;
+    ax.YAxis.TickLabelFormat=['%.',num2str(max(fd)),'f'];
+    xtl=xticklabels();
+    for p=1:length(xtl)
+        fN(p)=0;
+        fd(p)=NaN;
+        for q=1:length(xtl{p})
+            if strcmpi(xtl{p}(q),'-')
+                fN(p)=0;
+            elseif strcmpi(xtl{p}(q),'.')
+                fd(p)=0;
+            elseif isnan(fd(p))
+                fN(p)=fN(p)+1;
+            else
+                fd(p)=fd(p)+1;
+            end
+        end
+    end
+    ax=gca;
+    ax.XAxis.TickLabelFormat=['%.',num2str(max(fd)),'f'];
     % Figure 2: Max force acting on the atoms of the system. Parent images are shown in red, their child in yellow, their own child
     % in cmap(EnergyPathway.ImDepth(1)+2,:)), etc ... This figure is only shown if the NEB calculation ran with a version of VASP
     % that include the VTST plugin
@@ -376,25 +449,18 @@ elseif postprocessing&&~subNEB&&isscalar(EnergyPathway.XDATCAR(1,:)) % Case of a
         figure;
         h=bar(0,EnergyPathway.MaxForces(1)','FaceColor',cmap(EnergyPathway.ImDepth(1)+2,:),'EdgeColor',cmap(EnergyPathway.ImDepth(1)+2,:));
         hold on
-        for p=2:length(ldir)
+        for p=2:length(EnergyPathway.POSCAR)
             bar(p-1,EnergyPathway.MaxForces(p)','FaceColor',cmap(EnergyPathway.ImDepth(p)+2,:),'EdgeColor',cmap(EnergyPathway.ImDepth(p)+2,:));
         end
         set(get(h,'Parent'), 'YScale', 'log')
         ylim([min(EnergyPathway.MaxForces)/2 max(EnergyPathway.MaxForces)*2])
-        clear str_xticklab
-        for p=1:length(EnergyPathway.POSCAR)
-            str_xticklab{p}=EnergyPathway.POSCAR(p).Title;
-        end
         hold on
         grid on
         xlabel('Image number')
         xticks(0:length(EnergyPathway.MaxForces)-1)
-        xticklabels(lsname)
+        xticklabels(str)
         ylabel('Maximum force acting on atoms')
         set(gca,'fontsize',12,'fontname','cambria math')
     end
-end
-if isfield('str_xticklab',EnergyPathway)
-    EnergyPathway=rmfield(EnergyPathway,'str_xticklab');
 end
 cd(curr_dir)
