@@ -1,7 +1,7 @@
 function [POSCAR,bonds]=Proximity_check(POSCAR,varargin)
 %==================================================================================================================================%
 % Proximity_check.m:    Check distances between all possible pairs of atoms to identify and optionally modify their positions 
-%                       (v0.2)
+%                       (v0.2.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (09/03/2026) - Creation
@@ -10,6 +10,8 @@ function [POSCAR,bonds]=Proximity_check(POSCAR,varargin)
 %       author: EYG
 %   version 0.2 (30/04/2026) - Removal of the recursive call for efficiency. The distances are only checked for different atoms, 
 %       author: EYG             this may change in future updates. Added an 'absmin' optional argument.
+%   version 0.2.1 (06/09/2026) - Add a way to return NaN bonds when there is none.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   POSCAR:             POSCAR structure, or path+filename of a POSCAR file
@@ -27,8 +29,6 @@ load('ptable.mat')
 pushback=false;
 verbose=false;
 DBOND_MIN=ptable.bond_length;
-DBOND_MIN_abs=1;
-
 % Reading of the optional argument
 if exist('varargin','var')
     for p=1:2:length(varargin)
@@ -38,7 +38,7 @@ if exist('varargin','var')
                 DBOND_MIN=DBOND_MIN_ratio*DBOND_MIN;
             case 'absmin'
                 DBOND_MIN_abs=varargin{p+1};
-                DBOND_MIN=DBOND_MIN_abs;
+                DBOND_MIN=(DBOND_MIN./DBOND_MIN)*DBOND_MIN_abs;
             case 'pushback'
                 pushback=varargin{p+1};
             case 'verbose'
@@ -57,10 +57,12 @@ ks=find(ds<max(DBOND_MIN(:)))';
 Z=POSCAR.Z;
 % Browsing through the list, check the symbols and keep the pair only if the distance is lower than the one defined in the DBOND
 % matrix.
-k=1;
+k=0;
 ks_n=[];
 for p_ks=1:length(ks)
     if ds(ks(p_ks))<DBOND_MIN(Z(pairs(ks(p_ks),1)),Z(pairs(ks(p_ks),2)))
+        k=k+1;
+        ks_n(k)=ks(p_ks);
         if verbose
             disp(['Atoms ',num2str(pairs(ks(p_ks),1)),' and ',num2str(pairs(ks(p_ks),2)),' are too close!'])
         end
@@ -83,8 +85,11 @@ end
 for p=1:Natoms
     POSCAR.xred(p,:)=(1/POSCAR.acell)*inv(POSCAR.vec')*POSCAR.positions(p,:)';
 end
-
-bonds.idx=pairs(ks_n,:);
-bonds.ds=ds(ks_n);
-
-% end
+if k==0
+    bonds.idx=NaN;
+    bonds.ds=NaN;
+else
+    bonds.idx=pairs(ks_n,:);
+    bonds.ds=ds(ks_n);
+end
+end
