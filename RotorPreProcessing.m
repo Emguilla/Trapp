@@ -1,6 +1,6 @@
-function RotorPreProcessing(path,POSCAR,vibidx,idx_origin,idx_n,idx_rotor,sigma,varargin)
+function [proj,NEB]=RotorPreProcessing(path,POSCAR,idx_origin,idx_n,idx_rotor,sigma,varargin)
 %==================================================================================================================================%
-% RotorPreProcessing.m: Creation of the rotor file to be read by "hr_freq.m" or "fr_freq.m" (v0.4)
+% RotorPreProcessing.m: Creation of the rotor file to be read by "hr_freq.m" or "fr_freq.m" (v0.5)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (21/08/2025) - Creation
@@ -13,6 +13,8 @@ function RotorPreProcessing(path,POSCAR,vibidx,idx_origin,idx_n,idx_rotor,sigma,
 %                               generate a rendering of that particular mode.
 %   version 0.4 (03/07/2026) - Add optional arguments, which can enforce the mode (free/hindered) to avoid user input. Other 
 %       author: EYG             optional arguments relates to the rendering.
+%   version 0.5 (06/09/2026) - Removal of the "vibidx" argument. The choice of the mode to be substituted by a free or hindered
+%       author: EYG             rotor is now based on which mode projection on the rotation motion is greater.
 %==================================================================================================================================%
 % args:
 %   mode:       'hindered' -> create a "hindered_rotor.dat" file.
@@ -68,10 +70,36 @@ if exist('varargin','var')
     end
 end
 
-
+% complete path with a "/" if needed
 if ~strcmpi(path(end),'/')&&~strcmpi(path(end),'\')
     path=[path,'/'];
 end
+
+% read the energies and POSCARs corresponding to the rotation
+ldir=dir([path,'Rotation/*/POSCAR']);
+for p=1:length(ldir)
+    if ~exist([ldir(p).folder,'/OUTCAR'],'file')
+        warning('Nothing detected in image ',num2str(p),'!')
+        error('Please generate first the rotational images and perform a static calculation')
+    end
+end
+
+NEB=NEB_analysis('path',[path,'Rotation/']);
+ReactionRendering(NEB,XYZLim(1,:),XYZLim(2,:),XYZLim(3,:),'save_data','Infinite','rotate_view_angle',rotate_view_angle+default_view_angle,'quadview',quadview)
+
+% Calculation of the rotational energy barrier
+W=max(NEB.energies)-min(NEB.energies);
+
+% Identification of the mode most similar to the rotation
+if exist([path,'/POSCARs.mat'],'file')
+    load([path,'POSCARs.mat'],'POSCARs')
+else
+    error('Please process the displacement corresponding to each mode using HIVE.')
+end
+proj=mode_projection(NEB.POSCAR,POSCARs);
+[vib_match,vibidx]=max(proj);
+disp(['Rotation match mode n° ',num2str(vibidx),' with a ',num2str(vib_match*100,'%6.3f'),'% match.'])
+
 % If the POSCAR input is a character string, the corresponding file is read into a POSCAR structure
 if ischar(POSCAR)
     POSCAR=readPOSCAR([path,POSCAR]);
@@ -82,16 +110,13 @@ aLim=[min(Rotor_0.xred(:,1)) max(Rotor_0.xred(:,1))];
 bLim=[min(Rotor_0.xred(:,2)) max(Rotor_0.xred(:,2))];
 cLim=[min(Rotor_0.xred(:,3)) max(Rotor_0.xred(:,3))];
 
-if exist([path,'/DYNMAT'],'file')
-    POSCARs=HIVE_analysis(vibidx,'path',path);
-    for p=1:length(POSCARs)
-        CONTCARs(p)=subPOSCAR(POSCARs(p),idx_rotor);
-        aLim=[min([aLim(1) min(CONTCARs(p).xred(:,1))]) max([aLim(2) max(CONTCARs(p).xred(:,1))])];
-        bLim=[min([bLim(1) min(CONTCARs(p).xred(:,2))]) max([bLim(2) max(CONTCARs(p).xred(:,2))])];
-        cLim=[min([cLim(1) min(CONTCARs(p).xred(:,3))]) max([cLim(2) max(CONTCARs(p).xred(:,3))])];
-    end
-    ReactionRendering(CONTCARs,aLim,bLim,cLim,'quadview',true);
+for p=1:size(POSCARs,2)
+    CONTCARs(p)=subPOSCAR(POSCARs(vibidx,p),idx_rotor);
+    aLim=[min([aLim(1) min(CONTCARs(p).xred(:,1))]) max([aLim(2) max(CONTCARs(p).xred(:,1))])];
+    bLim=[min([bLim(1) min(CONTCARs(p).xred(:,2))]) max([bLim(2) max(CONTCARs(p).xred(:,2))])];
+    cLim=[min([cLim(1) min(CONTCARs(p).xred(:,3))]) max([cLim(2) max(CONTCARs(p).xred(:,3))])];
 end
+ReactionRendering(CONTCARs,aLim,bLim,cLim,'quadview',true,'save_data','infinite');
 % extract the origin and rotation axis vector from POSCAR structure. if the "idx_n" variable is a vector, this vector is taken as
 % the rotation axis
 origin=POSCAR.positions(idx_origin,:);
@@ -108,20 +133,6 @@ Rotor_0=subPOSCAR(POSCAR,idx);
 % Computation of the inertia moment
 [~,~,Iz]=InertiaMoment(Rotor_z);
 
-ldir=dir([path,'Rotation/*/POSCAR']);
-if length(ldir)>1
-    NEB=NEB_analysis('path',[path,'Rotation/']);
-    ReactionRendering(NEB,XYZLim(1,:),XYZLim(2,:),XYZLim(3,:),'save_data','Infinite','rotate_view_angle',rotate_view_angle+default_view_angle,'quadview',quadview)
-else
-    error('Please generate first the rotational images and perform a static calculation')
-end
-for p=1:length(ldir)
-    if ~exist([ldir(p).folder,'/OUTCAR'],'file')
-        warning('Nothing detected in image ',num2str(p),'!')
-        error('Please generate first the rotational images and perform a static calculation')
-    end
-end
-W=max(NEB.energies)-min(NEB.energies);
 if ~mode_set
     fprintf(['The rotational energy barrier seems to be about ',num2str(W*1000),' meV. Do you consider that to be a free or hindered rotation?\n 1) Free\n2) Hindered\n'])
     OK=false;
@@ -135,6 +146,7 @@ if ~mode_set
         end
     end
 end
+
 % For either mode, the value of the index of the vibrational mode, the symmetry number and inertia moment are written.
 fid=fopen([path,'VibRotor.dat'],'w');
 fprintf(fid,'%i',mode);
@@ -142,4 +154,5 @@ fprintf(fid,'   %04i',vibidx);
 fprintf(fid,'    %03i',sigma);
 fprintf(fid,'    %10.6e',Iz);
 fprintf(fid,'    %10.6e',W);
+fprintf(fid,'    %10.6e',vib_match);
 fclose(fid);
