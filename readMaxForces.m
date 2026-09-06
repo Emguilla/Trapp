@@ -1,6 +1,6 @@
 function F=readMaxForces(path,varargin)
 %==================================================================================================================================%
-% readEnergy.m: Extraction of the maximum force exerced on the atoms in the system from the raw output of VASP (v0.3)
+% readEnergy.m: Extraction of the maximum force exerced on the atoms in the system from the raw output of VASP (v0.3.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (28/08/2025) - Creation
@@ -13,6 +13,7 @@ function F=readMaxForces(path,varargin)
 %       contrib: EYG
 %   version 0.3 (17/07/2026) - Display of a warning if the calculation was carried by a VASP executable that was not compiled with 
 %       author: EYG             the VTST plugin (only if the newly added argument "verbose" is set to true)
+%   version 0.3.1 (06/09/2026) - Bug fix. Previously, isnan(F) would return multiple value.
 %==================================================================================================================================%
 % args:
 %   path:   Location of the directory where the OUTCAR file is stored
@@ -60,6 +61,6 @@ if ~save
     delete([path,'MaxForces.dat'])
 end
 % if F is still a NaN, it means that there is no "max atom, RMS" pattern in the OUTCAR file, i.e. it's not been compiled with VASP
-if isnan(F)&&verbose 
+if any(isnan(F))&&verbose 
     warning('The executable used for the calculation likely was not compiled with the VTST plugin!')
 end
