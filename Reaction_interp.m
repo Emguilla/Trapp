@@ -1,6 +1,6 @@
 function R_out=Reaction_interp(R_in,n,varargin)
 %==================================================================================================================================%
-% Reaction_interp.m:    Interpolation of a reaction structure between each images (v0.4)
+% Reaction_interp.m:    Interpolation of a reaction structure between each images (v0.5)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (01/09/2025) - Creation
@@ -14,6 +14,9 @@ function R_out=Reaction_interp(R_in,n,varargin)
 %   version 0.4 (01/07/2026) - Reaction structures now contain a field related to the depth of each images. The plot now
 %       author: EYG             discriminates between parent and child images, which are shown in different colors in the plot. In
 %                               addition, depth of interpolated images are set to NaN.
+%   version 0.5 (06/09/2026) - Add an option to interpolate the bond length between the primary images, instead of simply
+%       author: EYG             interpolating the position (e.g. the interpolation of a rotation would result in a triangle-shaped 
+%                               motion in the previous versions)
 %==================================================================================================================================%
 % args:
 %   R_in:       Reaction structure or POSCAR array
@@ -26,6 +29,9 @@ function R_out=Reaction_interp(R_in,n,varargin)
 %                           (default: false)
 %                       'verbose', followed by true or false to display information about the rendering (timing and number of atoms)
 %                           (default: false)
+%                       'fix_bond_length', followed by a N-by-2 array provinding the pairs for which the bond length should be
+%                           interpolated between each primary image.
+%                           (default: false)
 %==================================================================================================================================%
 
 % Initialisation of the default parameters and handling of the optional arguments
@@ -33,7 +39,7 @@ verbose=false;
 subNEB=false;
 pushback=false;
 DBOND_MIN_ratio=0.82;
-
+fix_bond_length=false;
 % Reading of the optional argument
 if exist('varargin','var')
     for p=1:2:length(varargin)
@@ -44,6 +50,9 @@ if exist('varargin','var')
                 verbose=varargin{p+1};
             case 'pushback'
                 pushback=varargin{p+1};
+            case 'fix_bond_length'
+                fix_bond_length=true;
+                pairs=varargin{p+1};
             case 'idx'
                 subNEB=true;
                 idx=varargin{p+1};
@@ -83,6 +92,12 @@ if ~isfield(R_in,'POSCAR')
         % For successive POSCAR structures, get the displacement vector using ds_POSCAR.m
         [~,ds]=ds_POSCAR(R_in(k+1),R_in(k));
         % the positions between a set of position and the next are computed through an interpolation of the displacement vector
+        if fix_bond_length
+            for p=1:size(pairs,1)
+                mv_ds_i(p)=norm(R_in(k).positions(pairs(p,1),:)-R_in(k).positions(pairs(p,2),:));
+                mv_ds_f(p)=norm(R_in(k+1).positions(pairs(p,1),:)-R_in(k+1).positions(pairs(p,2),:));
+            end
+        end
         for p=1:n+1
             if verbose
                 disp(['Generating intermediate image ',num2str(p)])
@@ -95,8 +110,16 @@ if ~isfield(R_in,'POSCAR')
             if pushback
                 [R_out(ki),~]=Proximity_check(R_out(ki),'min',DBOND_MIN_ratio,'pushback',pushback,'verbose',verbose);
             end
-            for p=1:sum(R_in(1).n_chemicals)
-                R_out(ki).xred(p,:)=(1/R_out(ki).acell)*inv(R_out(ki).vec')*R_out(ki).positions(p,:)';
+            if fix_bond_length
+                for q=1:size(pairs,1)
+                    H_pos=R_out(ki).positions(pairs(q,2),:);
+                    C_pos=R_out(ki).positions(pairs(q,1),:);
+                    u_CH=(H_pos-C_pos)/norm(H_pos-C_pos);
+                    R_out(ki).positions(pairs(q,2),:)=C_pos+(mv_ds_i(q)+(p/(n+1))*(mv_ds_f(q)-mv_ds_i(q)))*u_CH;
+                end
+            end
+            for q=1:sum(R_in(1).n_chemicals)
+                R_out(ki).xred(q,:)=(1/R_out(ki).acell)*inv(R_out(ki).vec')*R_out(ki).positions(q,:)';
             end
         end
     end
