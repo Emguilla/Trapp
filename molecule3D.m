@@ -1,6 +1,6 @@
 function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %==================================================================================================================================%
-% molecule3D.m: Draw 3D molecules (v3.2) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
+% molecule3D.m: Draw 3D molecules (v3.3) (based on André Ludwig's - aludwig@phys.ethz.ch - 2020 molecule3D script)
 %               (https://www.mathworks.com/matlabcentral/fileexchange/55231-molecule3d). Retrieved December 3, 2020.
 %==================================================================================================================================%
 % Version history:
@@ -46,12 +46,16 @@ function axout = molecule3D(POSCAR,aLim,bLim,cLim,varargin)
 %       contrib: EYG
 %   version 3.2 (09/07/2026) - Bug fix for the optional arguments: if the entry is a string, it gets converted to a character array
 %       author: EYG
+%   version 3.3 (06/09/2026) - The opt. arg. "save" has been splt in two: "sv_format" and "sv_filename".
+%       author: EYG
 %==================================================================================================================================%
 % args:
 %   POSCAR:             POSCAR structure, or path+filename of a POSCAR file
 %   aLim, bLim, cLim:   Limits of the structure (in direct coordinates) along the a, b and c vectors
-%   opt. args:          'save', followed by the format to which the 3D model must be saved (e.g. "png", "svg", ...)
-%                           (default: nothing is saved)
+%   opt. args:          'sv_filename', followed by the name of the file where the rendering should be saved.
+%                           (default:"standard")
+%                       'sv_format', followed by the format to which the 3D model must be saved (e.g. "png", "svg", ...)
+%                           (default: "svg")
 %                       'periodic', followed by true or false to enable or disable periodic folding of the model into the lattice. 
 %                           Note: turning the periodicity off allows to show atoms outside the unit cell, as they appear on the
 %                           "positions" field of the POSCAR structure.
@@ -133,7 +137,9 @@ end
 %==================================================================================================================================%
 % Initialisation of the default parameters and handling of the optional arguments
 %==================================================================================================================================%
-save=false;
+save_data=false;
+sv_format='svg';
+sv_fn='standard';
 periodic=true;
 rotate_view_angle=[0 0];
 isovalues_set=false;
@@ -162,9 +168,15 @@ if exist('varargin','var')
             varargin{p+1}=char(varargin{p+1});
         end
         switch lower(varargin{p})
-            case 'save'
-                save=true;
-                save_format=varargin{p+1};
+            case 'sv_format'
+                save_data=true;
+                sv_format=varargin{p+1};
+            case 'sv_filename'
+                save_data=true;
+                sv_fn=varargin{p+1};
+                if strcmpi(sv_fn(1),'.')
+                    warning('Unrecognized file format. Defaulting to "svg".')
+                end
             case 'periodic'
                 if ~varargin{p+1}
                     periodic=false;
@@ -565,33 +577,33 @@ end
 % Set camera direction (and optionally save)
 if ~multi_view
     view(default_view_angle+rotate_view_angle)
-    if save
-        saveas(gcf,['standard.',save_format])
-    end
     if lights
         camlight(cl,"left");
     end
-elseif save
+    if save_data
+        saveas(gcf,[sv_fn,'.',sv_format])
+    end
+elseif save_data
     view([0,0]+rotate_view_angle)
     if lights
         camlight(cl,"left");
     end
-    saveas(gcf,['a_view.',save_format])
+    saveas(gcf,['a_view.',sv_format])
     view([90,0]+rotate_view_angle)
     if lights
         camlight(cl,"left");
     end
-    saveas(gcf,['b_view.',save_format])
+    saveas(gcf,['b_view.',sv_format])
     view([0,90]+rotate_view_angle)
     if lights
         camlight(cl,"left");
     end
-    saveas(gcf,['c_view.',save_format])
+    saveas(gcf,['c_view.',sv_format])
     view(default_view_angle+rotate_view_angle)
     if lights
         camlight(cl,"left");
     end
-    saveas(gcf,['standard.',save_format])
+    saveas(gcf,['standard.',sv_format])
 else
     view([0,0]+rotate_view_angle)
     if lights
