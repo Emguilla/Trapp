@@ -1,6 +1,6 @@
 function [proj,NEB]=RotorPreProcessing(path,POSCAR,idx_origin,idx_n,idx_rotor,sigma,varargin)
 %==================================================================================================================================%
-% RotorPreProcessing.m: Creation of the rotor file to be read by "hr_freq.m" or "fr_freq.m" (v0.5)
+% RotorPreProcessing.m: Creation of the rotor file to be read by "hr_freq.m" or "fr_freq.m" (v0.5.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (21/08/2025) - Creation
@@ -15,6 +15,8 @@ function [proj,NEB]=RotorPreProcessing(path,POSCAR,idx_origin,idx_n,idx_rotor,si
 %       author: EYG             optional arguments relates to the rendering.
 %   version 0.5 (06/09/2026) - Removal of the "vibidx" argument. The choice of the mode to be substituted by a free or hindered
 %       author: EYG             rotor is now based on which mode projection on the rotation motion is greater.
+%   version 0.5.1 (06/09/2026) - Due to change to the "mode_projection" function (which became a matrix instead of a scalar), the
+%                                   match between the mode is taken as the maximum value of the projection matrix
 %==================================================================================================================================%
 % args:
 %   mode:       'hindered' -> create a "hindered_rotor.dat" file.
@@ -85,7 +87,7 @@ for p=1:length(ldir)
 end
 
 NEB=NEB_analysis('path',[path,'Rotation/']);
-ReactionRendering(NEB,XYZLim(1,:),XYZLim(2,:),XYZLim(3,:),'save_data','Infinite','rotate_view_angle',rotate_view_angle+default_view_angle,'quadview',quadview)
+% ReactionRendering(NEB,XYZLim(1,:),XYZLim(2,:),XYZLim(3,:),'save_data','Infinite','rotate_view_angle',rotate_view_angle+default_view_angle,'quadview',quadview)
 
 % Calculation of the rotational energy barrier
 W=max(NEB.energies)-min(NEB.energies);
@@ -96,7 +98,10 @@ if exist([path,'/POSCARs.mat'],'file')
 else
     error('Please process the displacement corresponding to each mode using HIVE.')
 end
-proj=mode_projection(NEB.POSCAR,POSCARs);
+disp(size(POSCARs,1))
+for p=1:size(POSCARs,1)
+    proj(p)=max(mode_projection(NEB.POSCAR,POSCARs(p,:)),[],'all');
+end
 [vib_match,vibidx]=max(proj);
 disp(['Rotation match mode n° ',num2str(vibidx),' with a ',num2str(vib_match*100,'%6.3f'),'% match.'])
 
