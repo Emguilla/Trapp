@@ -1,9 +1,11 @@
 function VIB=VIB_analysis(path)
 %==================================================================================================================================%
-% VIB_analysis.m: Data extraction of the (multiple) phonon calculations (v0.1)
+% VIB_analysis.m: Data extraction of the (multiple) phonon calculations (v0.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (03/07/2026) - Creation
+%       author: EYG
+%   version 0.2 (06/09/2026) - The output is now a structure array instead of a structure containing arrays.
 %       author: EYG
 %==================================================================================================================================%
 % args:
@@ -24,34 +26,32 @@ else
 end
 n_TS=length(ldir);
 for p=1:n_TS
-    POSCAR(p)=readPOSCAR([path,ldir(p).name,'/POSCAR']);
+    VIB(p).POSCAR=readPOSCAR([path,ldir(p).name,'/POSCAR']);
+    if n_TS>1
+        VIB(p).POSCAR.Title=ldir(p).name;
+    end
     if exist([path,ldir(p).name,'/VibRotor.dat'],'file')
         Data=load([path,ldir(p).name,'/VibRotor.dat']);
         if Data(1)==1
-            Rotor(p).mode='free';
+            VIB(p).Rotor.mode='free';
         elseif Data(1)==2
-            Rotor(p).mode='hindered';
+            VIB(p).Rotor.mode='hindered';
         end
-        Rotor(p).Vib_idx=Data(2);
-        Rotor(p).sigma=Data(3);
-        Rotor(p).I=Data(4);
-        Rotor(p).RotEnergyBarrier=Data(5);
+        VIB(p).Rotor.Vib_idx=Data(2);
+        VIB(p).Rotor.sigma=Data(3);
+        VIB(p).Rotor.I=Data(4);
+        VIB(p).Rotor.RotEnergyBarrier=Data(5);
     else
-        Rotor(p)=NaN;
+        VIB(p).Rotor=NaN;
     end
-    E=readEnergy([path,ldir(p).name,'/'],'save',true);
-    Energy(p)=E(1);
-    nu{p}=readFrequencies([path,ldir(p).name,'/']);
-    if sum(nu{p}==0)~=3
+    Energy=readEnergy([path,ldir(p).name,'/'],'save',true);
+    VIB(p).E=Energy(1);
+    VIB(p).nu=readFrequencies([path,ldir(p).name,'/']);
+    if sum(VIB(p).nu==0)~=3
         error('Severe problem found: there are fewer or more than three zero-frequency vibrational mode!')
     end
+    VIB(p).date=datetime('today');
 end
 
-% Construction of the VIB structure
-VIB.POSCAR=POSCAR;
-VIB.E=Energy;
-VIB.Freq=nu;
-VIB.Rotor=Rotor;
-
-% The data is stored in a ".mat" file for convenience
-save([path(1:end-1),'_VIB.mat'],'VIB')
+% The Vibration structure is stored in a ".mat" file for convenience
+save([path(1:end-1),'.mat'],'VIB')
