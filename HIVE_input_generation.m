@@ -27,6 +27,8 @@ if exist('varargin','var')
                 n_images=varargin{p+1};
             case 'clean3d'
                 clean3D=varargin{p+1};
+            otherwise
+                error('Unknown argument.')
         end
     end
 end
