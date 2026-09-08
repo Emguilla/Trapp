@@ -1,7 +1,7 @@
 function frames=ReactionRendering(R_in,aLim,bLim,cLim,varargin)
 %==================================================================================================================================%
 % ReactionRendering.m:  Render an animated or static 3D model of an atomic structure, with or without the corresponding energy 
-%                       profile (v0.4.1)
+%                       profile (v0.4.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (28/08/2025) - Creation
@@ -20,31 +20,39 @@ function frames=ReactionRendering(R_in,aLim,bLim,cLim,varargin)
 %   version 0.4 (01/07/2026) - The new field "ImDepth" of Reaction structures is taken into account when plotting the energy 
 %       author: EYG             profile. The NaN depth are no longer shown as dots, and parent and child images are shown in
 %                               different colours
-%   version 0.4.1 (28/07/2026) - Add three optional arguments: 1) rendering of the structure from 4 viewing angle 
-%                                   simultaneously, 2) Setting energy limits for the graph, 3) define delay time between frame of
-%                                   the gif if 'save_data' is true.
+%   version 0.4.1 (28/07/2026) - Add three optional arguments:  
+%       contrib: EYG                1) rendering of the structure from 4 viewing angle simultaneously,
+%                                   2) Setting energy limits for the graph, 
+%                                   3) define delay time between frame of the gif if 'save_data' is true.
+%   version 0.4.2 (08/09/2026) - Uniformisation of the number of significant digits in energy plots using the newly added 
+%       contrib: EYG                "uniform_digits_tick" function. In addition, there is an additional optional argument to decide
+%                                   whether the reaction coordinate values should be displayed.
 %==================================================================================================================================%
 % args:
 %   R_in:               Array of reaction structures (or POSCAR structures)
 %   aLim, bLim, cLim:   Limits of the structure (in direct coordinates) along the a, b and c vectors
 %   opt. args:          'save_data', followed by the playing direction of the GIF. Possible choices are 'Fwd', 'Bwd', 'Round' or 
-%                           'Infinite' 
+%                           'Infinite'.
 %                           (default: nothing is saved)
 %                       'static', followed by true or false to request a static rendering.
 %                           (default: false)
-%                       'rotate_view_angle', followed by a vector [theta,phi] to rotate the camera from its default direction
+%                       'rotate_view_angle', followed by a vector [theta,phi] to rotate the camera from its default direction.
 %                           (default: the model is shown from the spherical coordinates [19.5,9])
 %                       Note: in that case, the reaction structure at the last position of the array must concern a single 
 %                               configuration.
-%                       'lattice_vec', followed by either "2D" or "3D" to specify the type of lattice vector to be displayed
+%                       'lattice_vec', followed by either "2D" or "3D" to specify the type of lattice vector to be displayed.
 %                       'quad_view', followed by true or false to determine whether or not the structure should be displayed from 4
 %                           different viewing angles.
-%                       'ylim', followed by a 2-elements array providing the limit of the graph along the y-axis
-%                       'delay_time', followed by the delay time between two frames of the gif
+%                       'ylim', followed by a 2-elements array providing the limit of the graph along the y-axis.
+%                       'delay_time', followed by the delay time between two frames of the gif.
 %                           (default: 0.05)
+%                       'x_axis_units', followed true or false to specify whether the reaction coordinates values should be shown.
+%                           (default: true)
 %==================================================================================================================================%
+
 % set default parameters
 EnergyProfile=true;
+x_axis_units=true;
 save_data=false;
 quadview=false;
 gif_direction='infinite';
@@ -55,6 +63,7 @@ default_view_angle=[19.5 9];
 lattice_vec=NaN;
 ELim_set=false;
 delay_time=0.05;
+
 % Reading of the optional argument
 if exist('varargin','var')
     for p=1:2:length(varargin)
@@ -77,6 +86,8 @@ if exist('varargin','var')
                 ELim=varargin{p+1};
             case 'delay_time'
                 delay_time=varargin{p+1};
+            case 'x_axis_units'
+                x_axis_units=varargin{p+1};
         end
     end
 end
@@ -102,14 +113,11 @@ else
         figure('Position', [200 120 1200 425])
     end
     subplot(2,4,[3 4 7 8]);
-    % plot(R_in(1).reaction_coordinates(:,end),R_in(1).energies(:,end)-E0,'-','LineWidth',2,'color',lcolor(1,:))
-    plot(R_in(1).reaction_coordinates',R_in(1).energies'-E0,'-','LineWidth',2)
+    plot(R_in(1).reaction_coordinates(:,end)',R_in(1).energies(:,end)'-E0,'-','LineWidth',2)
     hold on
     for q=1:length(R_in.POSCAR)
         if ~isnan(R_in(1).ImDepth(q))
             plot(R_in(1).reaction_coordinates(q,end)',R_in(1).energies(q,end)'-E0,'.','MarkerFaceColor',lcolor(R_in(1).ImDepth(q)+2,:),'MarkerEdgeColor',lcolor(R_in(1).ImDepth(q)+2,:),'MarkerSize',16)
-        else
-            % plot(R_in(1).reaction_coordinates(q,end)',R_in(1).energies(q,end)'-E0,'.','MarkerFaceColor',[1 1 1]*0.25,'MarkerEdgeColor',[1 1 1]*0.5,'MarkerSize',8)
         end
     end
     box on
@@ -118,17 +126,17 @@ else
         for q=1:length(R_in.POSCAR)
             if ~isnan(R_in(p).ImDepth(q))
                 plot(R_in(p).reaction_coordinates(q,end)',R_in(p).energies(q,end)'-E0,'.','MarkerFaceColor',lcolor(R_in(p).ImDepth(q)+2,:),'MarkerEdgeColor',lcolor(R_in(p).ImDepth(q)+2,:),'MarkerSize',16)
-            else
-                % plot(R_in(p).reaction_coordinates(q,end)',R_in(p).energies(q,end)'-E0,'.','MarkerFaceColor',[1 1 1]*0.25,'MarkerEdgeColor',[1 1 1]*0.5,'MarkerSize',8)
             end
         end
-        % plot(R_in(p).reaction_coordinates(:,end),R_in(p).energies(:,end)-E0,'.','MarkerSize',20,'color',lcolor(p+1,:))
     end
     xlabel('Reaction coordinate')
     ylabel('Energy (eV)')
     set(gca,'fontsize',12,'fontname','cambria math')
     xticks(linspace(R_in(1).reaction_coordinates(1,end),R_in(1).reaction_coordinates(end,end),11))
-    xticklabels({'Reactants','','','','','','','','','','Products'})
+    if ~x_axis_units
+        xticklabels({'Reactants','','','','','','','','','','Products'})
+        set(gca,'XTickLabelRotation',0);
+    end
     if ELim_set
         ylim(ELim)
     end
@@ -138,6 +146,8 @@ else
         plot(R_in.reaction_coordinates(idxTS,end),R_in.energies(idxTS,end)-E0,'.','MarkerSize',20,'MarkerFaceColor',lcolor(3,:),'MarkerEdgeColor',lcolor(3,:))
     end
     xlim([R_in(1).reaction_coordinates(1,end),R_in(1).reaction_coordinates(end,end)])
+    ax=gca;
+    uniform_digits_ticks(ax,'y')
 end
 
 % convert aLim, bLim and cLim to XLim, YLim and ZLim
