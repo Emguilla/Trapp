@@ -1,6 +1,6 @@
 function EnergyPathway=NEB_analysis(varargin)
 %==================================================================================================================================%
-% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.3.4)
+% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.3.5)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (02/09/2025) - Creation using bits and pieces from my thesis works
@@ -35,6 +35,8 @@ function EnergyPathway=NEB_analysis(varargin)
 %       contrib: EYG                extract the short-form of the path (i.e. "D/02" instead of the "subNEB_D/02" used as the title
 %                                   of the POSCARs. In addition, the number of digits on the x- and y-axes now have the same number 
 %                                   of digits.
+%   version 0.3.5 (08/09/2026) - The previous modification related to the uniformisation of the number of significant digits has
+%       contrib: EYG                been transferred to a dedicated function, "uniform_digits_ticks".
 %==================================================================================================================================%
 % args:
 %   If a single EnergyPathway input is provided as an argument, this function only outputs visual akin to the result of the
@@ -340,25 +342,8 @@ if postprocessing&&~subNEB&&length(EnergyPathway.XDATCAR(1,:))~=1
     end
     legend(str_legend,'Location','best')
     set(gca,'fontsize',12,'fontname','cambria math')
-    ytl=yticklabels();
-    for p=1:length(ytl)
-        fN(p)=0;
-        fd(p)=NaN;
-        for q=1:length(ytl{p})
-            if strcmpi(ytl{p}(q),'-')
-                fN(p)=0;
-            elseif strcmpi(ytl{p}(q),'.')
-                fd(p)=0;
-            elseif isnan(fd(p))
-                fN(p)=fN(p)+1;
-            else
-                fd(p)=fd(p)+1;
-            end
-        end
-    end
     ax=gca;
-    ax.YAxis.TickLabelFormat=['%.',num2str(max(fd)),'f'];
-
+    uniform_digits_ticks(ax,'xy')
     % Figure 2: Maximum force acting on the atoms of the systems for each ionic iteration
     figure;
     semilogy(EnergyPathway.MaxForces(2:end-1,:)')
@@ -406,42 +391,8 @@ elseif postprocessing&&~subNEB&&isscalar(EnergyPathway.XDATCAR(1,:)) % Case of a
     xticks(linspace(min(EnergyPathway.reaction_coordinates),max(EnergyPathway.reaction_coordinates),11))
     ylabel('Energy (eV)')
     set(gca,'fontsize',12,'fontname','cambria math')
-    ytl=yticklabels();
-    for p=1:length(ytl)
-        fN(p)=0;
-        fd(p)=NaN;
-        for q=1:length(ytl{p})
-            if strcmpi(ytl{p}(q),'-')
-                fN(p)=0;
-            elseif strcmpi(ytl{p}(q),'.')
-                fd(p)=0;
-            elseif isnan(fd(p))
-                fN(p)=fN(p)+1;
-            else
-                fd(p)=fd(p)+1;
-            end
-        end
-    end
     ax=gca;
-    ax.YAxis.TickLabelFormat=['%.',num2str(max(fd)),'f'];
-    xtl=xticklabels();
-    for p=1:length(xtl)
-        fN(p)=0;
-        fd(p)=NaN;
-        for q=1:length(xtl{p})
-            if strcmpi(xtl{p}(q),'-')
-                fN(p)=0;
-            elseif strcmpi(xtl{p}(q),'.')
-                fd(p)=0;
-            elseif isnan(fd(p))
-                fN(p)=fN(p)+1;
-            else
-                fd(p)=fd(p)+1;
-            end
-        end
-    end
-    ax=gca;
-    ax.XAxis.TickLabelFormat=['%.',num2str(max(fd)),'f'];
+    uniform_digits_ticks(ax,'xy')
     % Figure 2: Max force acting on the atoms of the system. Parent images are shown in red, their child in yellow, their own child
     % in cmap(EnergyPathway.ImDepth(1)+2,:)), etc ... This figure is only shown if the NEB calculation ran with a version of VASP
     % that include the VTST plugin
