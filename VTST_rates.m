@@ -1,6 +1,6 @@
 function R_out=VTST_rates(path,press,V,T,molecules,concentrations,gas_Fwd,gas_Bwd,varargin)
 %==================================================================================================================================%
-% VTST_rates.m:  transition state theory calculation of reaction rate coefficient (v0.5)
+% VTST_rates.m:  transition state theory calculation of reaction rate coefficient (v0.5.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation (based on former bits and pieces from my thesis)
@@ -21,6 +21,8 @@ function R_out=VTST_rates(path,press,V,T,molecules,concentrations,gas_Fwd,gas_Bw
 %       author: EYG             the vibrational spectrum are now contained in the VIB structure, saved in a ".mat" file. The 
 %                               EnergyPathway structure is no longer generated on-the-fly but read from a ".mat" file stored in
 %                               path/images. ZPE is now computed for each image and the endpoints within the T loop.
+%   version 0.5.1 (12/10/2026) - The warning to the user about the excess imaginary frequency now discriminate between one and more
+%       contrib: EYG                than one extra imaginary frequency
 %==================================================================================================================================%
 % args:
 %   path:           Location of reaction directory
@@ -214,7 +216,11 @@ for p=1:length(T)
             elseif sum(nu{q}<0)>1
                 if ~dispwarning(q)
                     dispwarning(q)=true;
-                    warning(['Vibration calculation of image ',num2str(q),' (',VIB(q).POSCAR.Title,') has more than one imaginary frequency, and will be ignored.'])
+                    if sum(nu{q}<0)==2
+                        warning(['Vibration calculation of image ',num2str(q),' (',VIB(q).POSCAR.Title,') has one extra imaginary frequency, and will be ignored.'])
+                    else
+                        warning(['Vibration calculation of image ',num2str(q),' (',VIB(q).POSCAR.Title,') has more than one extra imaginary frequency, and will be ignored.'])
+                    end
                 end
                 TS.nu(q,:)=NaN(1,nDOF-4);
                 TS.nu_d(q)=NaN;
