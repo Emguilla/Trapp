@@ -67,7 +67,7 @@ for p=1:n_TS
             tmp_d=0;
             for alpha=1:3
                 for beta=1:3
-                    H(3*(u-1)+alpha,3*(v-1)+beta)=-DYNMAT.dF{u,alpha}(v,beta)/norm(DYNMAT.dh{u,alpha});
+                    H(3*(u-1)+alpha,3*(v-1)+beta)=-DYNMAT.dF{u,alpha}(v,beta)/DYNMAT.dh{u,alpha}(beta);
                 end
                 tmp_d=tmp_d+norm(DYNMAT.dF{u,alpha}(v,:))^2;
             end
@@ -114,21 +114,24 @@ for p=1:n_TS
 % Work in progress: extraction of displacement vectors
 %========================================================%
     V=V(:,idx);
+%========================================================%
+%========================================================%
+%========================================================%
     VIB(p).DYNMAT=DYNMAT;
-%========================================================%
-%========================================================%
-%========================================================%
     % Removal of negligible frequencies
     VIB(p).nu=freq_Hz.*(abs(freq_Hz)>1e8);
+    % Storage of raw Hessian an dynamical matrices
     VIB(p).H=H;
     VIB(p).D=D;
+    % Check the presence of only 3 translation, zero-frequency modes
     if sum(VIB(p).nu==0)~=3
         error('Severe problem found: there are fewer or more than three zero-frequency vibrational mode!')
     end
+    % Add a timestamp for archiving
     VIB(p).date=datetime('today');
 end
 
-% The Vibration structure is stored in a ".mat" file for convenience
+% The vibration structure is stored in a ".mat" file for convenience
 save([path(1:end-1),'.mat'],'VIB')
 
 
