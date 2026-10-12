@@ -1,7 +1,7 @@
 function [POSCARs,Freq]=HIVE_analysis(idx,varargin)
 %==================================================================================================================================%
 % HIVE_analysis.m:  Use of the HIVE program to get accurate frequencies and the POSCAR structures corresponding to the displacement
-%                   in the direction of a specific mode. (v0.3)
+%                   in the direction of a specific mode. (v0.3.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (27/08/2025) - Creation
@@ -24,6 +24,8 @@ function [POSCARs,Freq]=HIVE_analysis(idx,varargin)
 %                                   modes. If left empty, idx defaults to "1" instead of the previous value of the 3N-th mode.
 %   version 0.3 (06/09/2026) - Add the possibility to save the POSCARs in a dedicated "POSCARs.mat" save file. Additional changes 
 %       author: EYG             were made to accomodate for the use of HIVE4 instead of HIVE3. 
+%   version 0.3.1 (12/10/2026) - The program now avoids to compute the displacement when the user enters "NaN" as the "idx" input.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   idx:        index of the mode to analyse (in decreasing order of frequency magnitude), or idx="all" to write all modes.
@@ -184,10 +186,12 @@ else
     end
 end
 q=1;
-nbytes = fprintf(['Reading SQ_PHONON_',num2str(length(Freq)-idx(q)+1)],' out of %d',length(idx));
-for q=1:length(idx)
-    fprintf(repmat('\b',1,nbytes))
-    POSCARs(q,:)=readSQPHONON(['SQ_PHONON_',num2str(length(Freq)-idx(q)+1),'.hive']);
+if ~isnan(idx)
+    nbytes = fprintf(['Reading SQ_PHONON_',num2str(length(Freq)-idx(q)+1)],' out of %d',length(idx));
+    for q=1:length(idx)
+        fprintf(repmat('\b',1,nbytes))
+        POSCARs(q,:)=readSQPHONON(['SQ_PHONON_',num2str(length(Freq)-idx(q)+1),'.hive']);
+    end
 end
 %system(['wsl -d ',WSL_distro,' rm -rf POSCARs']);
 cd ..
