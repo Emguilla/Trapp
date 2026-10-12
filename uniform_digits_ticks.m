@@ -1,9 +1,11 @@
 function uniform_digits_ticks(ax,xyz)
 %==================================================================================================================================%
-% uniform_digits_ticks.m:   Uniformisation of the number of significant digits in plots (v0.1)
+% uniform_digits_ticks.m:   Uniformisation of the number of significant digits in plots (v0.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (08/09/2026) - Creation
+%       author: EYG
+%   version 0.2 (12/10/2026) - Add the possibility to apply the uniformisation to the colorbar as well.
 %       author: EYG
 %==================================================================================================================================%
 % args:
@@ -13,7 +15,12 @@ function uniform_digits_ticks(ax,xyz)
 
 for p=1:length(xyz)
     % For each directions specified by the user, the ticklabels are retrieved
-    axis=get(ax,[upper(xyz(p)),'Axis']);
+    if strcmpi(xyz(p),'C')
+        cb=colorbar;
+        axis=cb.Ruler;
+    else
+        axis=get(ax,[upper(xyz(p)),'Axis']);
+    end
     tl=axis.TickLabels();
     % Each of the ticklabels are analysed to find what is their format ('fN.d' formatting)
     for p=1:length(tl)
