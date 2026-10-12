@@ -1,6 +1,6 @@
 function EnergyPathway=NEB_analysis(varargin)
 %==================================================================================================================================%
-% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.3.5)
+% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.3.5.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (02/09/2025) - Creation using bits and pieces from my thesis works
@@ -37,6 +37,8 @@ function EnergyPathway=NEB_analysis(varargin)
 %                                   of digits.
 %   version 0.3.5 (08/09/2026) - The previous modification related to the uniformisation of the number of significant digits has
 %       contrib: EYG                been transferred to a dedicated function, "uniform_digits_ticks".
+%   version 0.3.5.1 (12/10/2026) - Bug fix: previously, the "subdir_ordering" function was called upon the local directory, even
+%       contrib: EYG                when the opt. arg. "path" was enabled.
 %==================================================================================================================================%
 % args:
 %   If a single EnergyPathway input is provided as an argument, this function only outputs visual akin to the result of the
@@ -139,7 +141,7 @@ if ~visual_only
     % Find all directories containing endpoints and images, and reading of the energies, positions and forces for each iteration and
     % each image. This happen using the "subdir_ordering" function when subNEB is enabled.
     if subNEB
-        [ldir,~,~]=subdir_ordering('./');
+        [ldir,~,~]=subdir_ordering(path);
     else
         ldir=dir('0*');
         for p=1:length(ldir)
