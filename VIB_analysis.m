@@ -1,6 +1,6 @@
 function VIB=VIB_analysis(path)
 %==================================================================================================================================%
-% VIB_analysis.m: Data extraction of the (multiple) phonon calculations (v0.3)
+% VIB_analysis.m: Data extraction and diagonalisation of the (multiple) phonon calculations (v0.3.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (03/07/2026) - Creation
@@ -9,6 +9,8 @@ function VIB=VIB_analysis(path)
 %       author: EYG
 %   version 0.3 (12/10/2026) - Overhaul of the code. The diagonalisation is now performed within the toolbox instead of relying on 
 %       author: EYG             HIVE.
+%   version 0.3.1 (12/10/2026) - Modification to accomodate the changes to "ASR_diagonal" and "ASR_Lagrange" scripts.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   path:   Location of the directory where the phonon calculation are located
@@ -77,9 +79,9 @@ for p=1:n_TS
     H=(H'+H)/2;
     
     % Enforcing the Acoustic Sum Rule (ASR) wrt the diagonal term
-    H=enforce_asr_diagonal_only(H,double(Natoms));
+    H=ASR_diagonal(H);
     % Enforcing the ASR using lagrange multiplier (seems to reduce leaking from the TS mode, idk why yet ... tbd)
-    H=enforce_asr_lagrange(H,double(Natoms));
+    H=ASR_Lagrange(H);
 
     for u=1:Natoms
         s(u)=0;
