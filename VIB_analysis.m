@@ -106,7 +106,7 @@ for p=1:n_TS
     % Calculation of the mass-weighted, Dynamical matrix
     D=H./sqrt(M'*M);
     % Diagonalisation
-    [V,L,W]=eig(D);
+    [V,L]=eig(D);
     % Extraction of eigenvalues
     VIB.L=L;
     [lambda,idx]=sort(diag(L));
@@ -115,7 +115,7 @@ for p=1:n_TS
 %========================================================%
 % Work in progress: extraction of displacement vectors
 %========================================================%
-    V=W(idx,:);%./repelem(DYNMAT.POSCAR.mass(:),3);
+    V=V(idx,:);%./repelem(DYNMAT.POSCAR.mass(:),3);
     POSCAR=readPOSCAR('Rotation/*/POSCAR');
     for vibidx=1:Natoms*3
         Motion_Vector=V(:,vibidx)/norm(V(:,vibidx));
