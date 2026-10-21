@@ -112,39 +112,33 @@ for p=1:n_TS
     [lambda,idx]=sort(diag(L));
     VIB.idx=idx;
     freq_Hz = sqrt(lambda)/(2*pi);
-%========================================================%
-% Work in progress: extraction of displacement vectors
-%========================================================%
-    V=V(idx,:);%./repelem(DYNMAT.POSCAR.mass(:),3);
-    POSCAR=readPOSCAR('Rotation/*/POSCAR');
-    for vibidx=1:Natoms*3
-        Motion_Vector=V(:,vibidx)/norm(V(:,vibidx));
-        Motion_Vector=reshape(Motion_Vector,Natoms,3);
-        VIB(p).Motion_Vector=Motion_Vector;
-        CONTCAR(1)=DYNMAT.POSCAR;
-        CONTCAR(1).positions=DYNMAT.POSCAR.positions-Motion_Vector;
-        CONTCAR(2)=DYNMAT.POSCAR;
-        CONTCAR(3)=DYNMAT.POSCAR;
-        CONTCAR(3).positions=DYNMAT.POSCAR.positions+Motion_Vector;
-        VIB(p).proj(vibidx)=max(mode_projection(POSCAR,CONTCAR),[],'all');
-    end
-    nframes=36;
-    amplitude=1;
-        % prefactor=sqrt(2*hbar/(2*pi*abs(freq_Hz(1))*1e12*931.4940954E6/(c^2)))*1e10;
-        % disp(prefactor)
-    for q=1:nframes
-        phase=2*pi*(q-1)/nframes;
-        CONTCAR(q)=DYNMAT.POSCAR;
-        CONTCAR(q).positions=DYNMAT.POSCAR.positions+sin(phase)*Motion_Vector;
-        % sqrt(2.0_R_double*hbar/(abs(w)*twoPI*1.0E12_R_double*amu2eVs2onm2))*1.0E10_R_double
-    end
-    VIB.CONTCAR=CONTCAR;
-%========================================================%
-%========================================================%
-%========================================================%
     VIB(p).DYNMAT=DYNMAT;
     % Removal of negligible frequencies
     VIB(p).nu=freq_Hz.*(abs(freq_Hz)>1e8);
+%========================================================%
+% Work in progress: extraction of displacement vectors
+%========================================================%
+    V=V(:,idx)./sqrt(repelem(DYNMAT.POSCAR.mass(:),3));
+    POSCAR=readPOSCAR([ldir(p).name,'/Rotation/*/POSCAR']);
+    nframes=36;
+    amplitude=1;
+    mode_idx=2;
+    for vibidx=1:Natoms*3%mode_idx
+        disp(vibidx)
+        Motion_Vector=V(:,vibidx)/norm(V(:,vibidx));
+        Motion_Vector=reshape(Motion_Vector,3,Natoms)';
+        for q=1:nframes
+            phase=2*pi*(q-1)/nframes;
+            VIB(p).modes(vibidx,q)=DYNMAT.POSCAR;
+            VIB(p).modes(vibidx,q).positions=DYNMAT.POSCAR.positions+sin(phase)*Motion_Vector;
+        end
+        VIB(p).Motion_Vector=Motion_Vector;
+
+        VIB(p).proj(vibidx)=max(mode_projection(POSCAR,VIB(p).modes(vibidx,:)),[],'all');
+    end
+%========================================================%
+%========================================================%
+%========================================================%
     % Storage
     VIB(p).H=H; % Hessian Matrix
     VIB(p).D=D; % Dynamical Matrix
@@ -158,7 +152,7 @@ for p=1:n_TS
 end
 
 % The vibration structure is stored in a ".mat" file for convenience
-save([path(1:end-1),'.mat'],'VIB')
+%save([path(1:end-1),'.mat'],'VIB')
 
 
 
@@ -166,40 +160,40 @@ save([path(1:end-1),'.mat'],'VIB')
 %========================================================%
 % plot data
 %========================================================%
-figure;
-imagesc(3*n,3*n,log10(abs(H)))
-pbaspect([1 1 1])
-xticks(0:3:Natoms*3)
-yticks(0:3:Natoms*3)
-xticklabels('')
-xtl=xticklabels();
-xtl{2}='1';
-xtl{end}=num2str(Natoms);
-xticklabels(xtl);
-yticklabels('')
-ytl=yticklabels();
-ytl{2}='1';
-ytl{end}=num2str(Natoms);
-yticklabels(ytl);
-grid on
-set(gca,'YDir','normal');
-set(gca,'XTickLabelRotation',0);
-set(gca,'fontsize',12,'fontname','cambria math')
-
-figure;
-imagesc(n,n,log10(Atomic))
-hold on
-pbaspect([1 1 1])
-if isstruct(DYNMAT.POSCAR)
-    for u=1:length(DYNMAT.POSCAR.n_chemicals)
-        nticks(u)=sum(DYNMAT.POSCAR.n_chemicals(1:u));
-        if u>1
-            plot([nticks(u-1)+0.5 nticks(u-1)+0.5],[0 Natoms],'w--')
-            plot([0 Natoms],[nticks(u-1)+0.5 nticks(u-1)+0.5],'w--')
-        end
-    end
-end
-set(gca,'YDir','normal');
-set(gca,'XTickLabelRotation',0);
-set(gca,'fontsize',12,'fontname','cambria math')
+% figure;
+% imagesc(3*n,3*n,log10(abs(H)))
+% pbaspect([1 1 1])
+% xticks(0:3:Natoms*3)
+% yticks(0:3:Natoms*3)
+% xticklabels('')
+% xtl=xticklabels();
+% xtl{2}='1';
+% xtl{end}=num2str(Natoms);
+% xticklabels(xtl);
+% yticklabels('')
+% ytl=yticklabels();
+% ytl{2}='1';
+% ytl{end}=num2str(Natoms);
+% yticklabels(ytl);
+% grid on
+% set(gca,'YDir','normal');
+% set(gca,'XTickLabelRotation',0);
+% set(gca,'fontsize',12,'fontname','cambria math')
+% 
+% figure;
+% imagesc(n,n,log10(Atomic))
+% hold on
+% pbaspect([1 1 1])
+% if isstruct(DYNMAT.POSCAR)
+%     for u=1:length(DYNMAT.POSCAR.n_chemicals)
+%         nticks(u)=sum(DYNMAT.POSCAR.n_chemicals(1:u));
+%         if u>1
+%             plot([nticks(u-1)+0.5 nticks(u-1)+0.5],[0 Natoms],'w--')
+%             plot([0 Natoms],[nticks(u-1)+0.5 nticks(u-1)+0.5],'w--')
+%         end
+%     end
+% end
+% set(gca,'YDir','normal');
+% set(gca,'XTickLabelRotation',0);
+% set(gca,'fontsize',12,'fontname','cambria math')
 
