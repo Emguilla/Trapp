@@ -1,16 +1,19 @@
 function DYNMAT=readDYNMAT(filename)
 %==================================================================================================================================%
-% readPOSCAR.m: Read of a DYNMAT file from VASP and creation of a DYNMAT structure file in MatLab (v0.1.1)
+% readPOSCAR.m: Read of a DYNMAT file from VASP and creation of a DYNMAT structure file in MatLab (v0.1.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (12/10/2026) - Creation
 %       author: EYG
 %   version 0.1.1 (12/10/2026) - Add a way to retrieve the path to the folder based on the filename
 %       contrib: EYG
+%   version 0.1.2 (21/10/2026) - Add a default case for the path variable
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   filename:   path + name of the file to be read as a DYNMAT
 %==================================================================================================================================%
+path='./';
 for p=1:length(filename)
     if strcmpi(filename(p),'/')||strcmpi(filename(p),'\')
         path=filename(1:p);
