@@ -133,8 +133,8 @@ for p=1:n_TS
             VIB(p).modes(vibidx,q).positions=DYNMAT.POSCAR.positions+sin(phase)*Motion_Vector;
         end
         VIB(p).Motion_Vector=Motion_Vector;
-
         VIB(p).proj(vibidx)=max(mode_projection(POSCAR,VIB(p).modes(vibidx,:)),[],'all');
+        VIB(p).proj_raw{vibidx}=mode_projection(POSCAR,VIB(p).modes(vibidx,:));
     end
 %========================================================%
 %========================================================%
