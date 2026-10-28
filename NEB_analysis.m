@@ -1,6 +1,6 @@
 function EnergyPathway=NEB_analysis(varargin)
 %==================================================================================================================================%
-% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.3.5.1)
+% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.3.5.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (02/09/2025) - Creation using bits and pieces from my thesis works
@@ -39,6 +39,8 @@ function EnergyPathway=NEB_analysis(varargin)
 %       contrib: EYG                been transferred to a dedicated function, "uniform_digits_ticks".
 %   version 0.3.5.1 (12/10/2026) - Bug fix: previously, the "subdir_ordering" function was called upon the local directory, even
 %       contrib: EYG                when the opt. arg. "path" was enabled.
+%   version 0.3.5.2 (28/10/2026) - Add warning when attempting at reading a folder for which no NEB calculation ran.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   If a single EnergyPathway input is provided as an argument, this function only outputs visual akin to the result of the
@@ -150,6 +152,13 @@ if ~visual_only
         end
         [ldir.image_depth]=image_depth{:};
         clear image_depth
+    end
+    % Check presence of OUTCAR in each directory
+    for p=1:length(ldir)
+        if ~exist([ldir(p).folder,'/OUTCAR'],'file')
+            warning('Nothing detected in image ',num2str(p),'!')
+            error('Since no OUTCAR were detected in this image, check you actually ran a (c)NEB calculation!')
+        end
     end
     Title=grep([ldir(1).name,'/OUTCAR'],'SYSTEM','fwd',0);
     Title_idx=find(Title{1}=='=');
