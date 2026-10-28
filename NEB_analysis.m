@@ -1,6 +1,6 @@
 function EnergyPathway=NEB_analysis(varargin)
 %==================================================================================================================================%
-% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.3.5.2)
+% NEB_analysis.m:   Post-processing of a (c)NEB calculation (v0.3.5.3)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (02/09/2025) - Creation using bits and pieces from my thesis works
@@ -40,6 +40,8 @@ function EnergyPathway=NEB_analysis(varargin)
 %   version 0.3.5.1 (12/10/2026) - Bug fix: previously, the "subdir_ordering" function was called upon the local directory, even
 %       contrib: EYG                when the opt. arg. "path" was enabled.
 %   version 0.3.5.2 (28/10/2026) - Add warning when attempting at reading a folder for which no NEB calculation ran.
+%       contrib: EYG
+%   version 0.3.5.3 (28/10/2026) - Bug fix: check of the presence of OUTCAR file was broken, looking for it in the parent directory
 %       contrib: EYG
 %==================================================================================================================================%
 % args:
@@ -145,7 +147,7 @@ if ~visual_only
     if subNEB
         [ldir,~,~]=subdir_ordering(path);
     else
-        ldir=dir('0*');
+        ldir=dir([path,'0*']);
         for p=1:length(ldir)
             image_depth{p}=0;
             lsname{p}=ldir(p).name;
@@ -155,8 +157,8 @@ if ~visual_only
     end
     % Check presence of OUTCAR in each directory
     for p=1:length(ldir)
-        if ~exist([ldir(p).folder,'/OUTCAR'],'file')
-            warning('Nothing detected in image ',num2str(p),'!')
+        if ~exist([ldir(p).name,'/OUTCAR'],'file')
+            warning(['Nothing detected in image ',num2str(p),'!'])
             error('Since no OUTCAR were detected in this image, check you actually ran a (c)NEB calculation!')
         end
     end
@@ -256,7 +258,7 @@ if ~visual_only
             end
         end
     end
-        
+
     % Additional sanity check on the constraint over the degree of freedom of moving atoms:
     if parametric_coordinates
         [x,ds_vec]=coordinate_mapping(XDATCAR,parametric_coordinates,projected_coordinates,projected_resolution);
