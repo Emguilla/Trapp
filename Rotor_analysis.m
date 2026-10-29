@@ -5,6 +5,8 @@ function ROTOR=Rotor_analysis(POSCAR,idx_origin,idx_rotor,sigma,varargin)
 % Version history:
 %   version 0.1 (28/10/2026) - Creation
 %       author: EYG
+%   version 0.1.1 (29/10/2026) - Bug fix: there was an error wrt isnan for "idx_n" check when user-defined with two indices.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   POSCAR:         POSCAR structure or string pointing to the location of the POSCAR file to be read as a POSCAR structure
@@ -81,7 +83,7 @@ origin=POSCAR.positions(idx_origin,:);
 
 % extraction of the rotation axis vector. If neither "idx_n" nor "n" are set by the user, the default is to set the rotation axis 
 % as the vector from the anchor/origin to the CM of the rotor (excluding the anchor/origin atom).
-if isnan(idx_n)&&any(isnan(n))
+if any(isnan(idx_n))&&any(isnan(n))
     idx_rotor_short=idx_rotor(~(idx_rotor==idx_origin));
     CM_rotor_short=sum(POSCAR.positions(idx_rotor_short,:))/length(idx_rotor_short);
     n=CM_rotor_short-POSCAR.positions(idx_origin,:);
