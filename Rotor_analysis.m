@@ -1,11 +1,13 @@
 function ROTOR=Rotor_analysis(POSCAR,idx_origin,idx_rotor,sigma,varargin)
 %==================================================================================================================================%
-% Rotor_analysis.m: Post-processing of a rotation calculation and creation of a ROTOR structure (v0.1)
+% Rotor_analysis.m: Post-processing of a rotation calculation and creation of a ROTOR structure (v0.1.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (28/10/2026) - Creation
 %       author: EYG
 %   version 0.1.1 (29/10/2026) - Bug fix: there was an error wrt isnan for "idx_n" check when user-defined with two indices.
+%       contrib: EYG
+%   version 0.1.2 (31/10/2026) - Add a field to store the displacement associated with the rotation of the rotor
 %       contrib: EYG
 %==================================================================================================================================%
 % args:
@@ -99,10 +101,19 @@ end
 
 % Extraction of the rotor from the POSCAR
 Rotor_0=subPOSCAR(POSCAR,idx_rotor);
+
 % Rotation of the rotor to match the rotational axis and the z-axis, and translation of the anchor to the origin
 [Rotor_z,~,~,~]=RotorProjectionZ(origin,n,Rotor_0);
+
 % Computation of the inertia moment
 [~,~,Iz]=InertiaMoment(Rotor_z);
+
+% Computation of the infinitesimal rotation motion
+Rotor_0=rotn(origin,n,0.001,Rotor_0);
+CONTCAR=POSCAR;
+CONTCAR.positions(idx_rotor,:)=Rotor_0.positions;
+ds_rot=CONTCAR.positions-POSCAR.positions;
+ds_rot=ds_rot/norm(ds_rot);
 
 % Recording of the inputs and outputs in a Rotor structure 
 ROTOR.INPUT.idx_origin=idx_origin;
@@ -113,7 +124,7 @@ ROTOR.INPUT.sigma=sigma;
 ROTOR.POSCAR=POSCAR;
 ROTOR.Iz=Iz;
 ROTOR.NEB=NEB;
-
+ROTOR.ds_rot=ds_rot;
 % Save Rotor structure if requested
 if save_data
     save([path,filename],'ROTOR')
