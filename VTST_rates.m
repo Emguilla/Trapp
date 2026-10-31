@@ -1,6 +1,6 @@
 function R_out=VTST_rates(path,press,V,T,molecules,concentrations,gas_Fwd,gas_Bwd,varargin)
 %==================================================================================================================================%
-% VTST_rates.m:  transition state theory calculation of reaction rate coefficient (v0.5.1)
+% VTST_rates.m:  transition state theory calculation of reaction rate coefficient (v0.5.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation (based on former bits and pieces from my thesis)
@@ -23,6 +23,9 @@ function R_out=VTST_rates(path,press,V,T,molecules,concentrations,gas_Fwd,gas_Bw
 %                               path/images. ZPE is now computed for each image and the endpoints within the T loop.
 %   version 0.5.1 (12/10/2026) - The warning to the user about the excess imaginary frequency now discriminate between one and more
 %       contrib: EYG                than one extra imaginary frequency
+%   version 0.5.2 (31/10/2026) - Since the frequency array of the VIB structure is now a complex array (instead of a real array
+%       contrib: EYG                which negative values correspond to imaginary numbers), the checks on the number of the zero
+%                                   and imaginary frequencies have been adapted.
 %==================================================================================================================================%
 % args:
 %   path:           Location of reaction directory
@@ -206,14 +209,14 @@ for p=1:length(T)
             [nu{q},nu_vib(p,q),nu_rot(p,q)]=VibRot_Freq(VIB(q),T(p));
             if sum(nu{q}==0)~=3
                 error('Severe problem found: there are fewer or more than three zero-frequency vibrational mode!')
-            elseif sum(nu{q}<0)<1
+            elseif sum(imag(nu{q})~=0)<1
                 if ~dispwarning(q)
                     dispwarning(q)=true;
                     warning(['Vibration calculation of image ',num2str(q),' (',VIB(q).POSCAR.Title,') has no imaginary frequency, and will be ignored.'])
                 end
                 TS.nu(q,:)=NaN(1,nDOF-4);
                 TS.nu_d(q)=NaN;
-            elseif sum(nu{q}<0)>1
+            elseif sum(imag(nu{q})~=0)>1
                 if ~dispwarning(q)
                     dispwarning(q)=true;
                     if sum(nu{q}<0)==2
@@ -225,8 +228,8 @@ for p=1:length(T)
                 TS.nu(q,:)=NaN(1,nDOF-4);
                 TS.nu_d(q)=NaN;
             else
-                TS.nu(q,:)=nu{q}(nu{q}>0);
-                TS.nu_d(q)=-nu{q}(nu{q}<0);
+                TS.nu(q,:)=nu{q}(real(nu{q})~=0);
+                TS.nu_d(q)=nu{q}(imag(nu{q})~=0);
             end
             TS.ZPE(q)=ZPE([TS.nu(q,:)]);
             TS.delta_ZPE_Fwd(q)=(TS.ZPE(q))-(ZPE_I);
