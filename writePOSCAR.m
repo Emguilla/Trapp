@@ -1,6 +1,6 @@
 function writePOSCAR(POSCAR,filename,varargin)
 %==================================================================================================================================%
-% readPOSCAR.m: write a POSCAR MatLab structure in a file following VASP format (v0.4.1)
+% writePOSCAR.m: write a POSCAR MatLab structure in a file following VASP format (v0.4.2)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (02/12/2025) - Creation
@@ -21,7 +21,10 @@ function writePOSCAR(POSCAR,filename,varargin)
 %   filename:   path + name of the file in which the POSCAR structure must be stored
 %   opt. args:  'sort', followed by true or false to decide whether to sort the atoms.
 %                   (default: atoms are grouped and sorted according to their atomic number)
+%               'xred', followed by true or false to decide whether to write the atomic position in reduced coordinates.
+%                   (default: false and positions are written in cartesian coordinates)
 %==================================================================================================================================%
+
 % Initialisation of the default parameters
 sort_opt=true;
 POSCAR.coord.Cartesian=true;
