@@ -1,10 +1,12 @@
 function writeDYNMAT(DYNMAT,filename,varargin)
 %==================================================================================================================================%
-% writeDYNMAT.m: write a DYNMAT MatLab structure in a file following VASP format (v0.1)
+% writeDYNMAT.m: write a DYNMAT MatLab structure in a file following VASP format (v0.1.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (01/11/2026) - Creation
 %       author: EYG
+%   version 0.1.1 (01/11/2026) - The default value for the mask is now set to the value of the mask contained in the DYNMAT
+%       author: EYG                 structure.
 %==================================================================================================================================%
 % args:
 %   DYNMAT:     DYNMAT structure to be written
@@ -12,13 +14,13 @@ function writeDYNMAT(DYNMAT,filename,varargin)
 %   opt. args:  'idx', followed by the atoms on which finite differences are applied.
 %                   (default: all atoms are considered)
 %               'mask', followed by a Nx3 logical array to specify which DOF are considered.
-%                   (default: all DOF are considered)
+%                   (default: mask of the DYNMAT)
 %==================================================================================================================================%
 
 % Initialisation of the default parameters
 idx_enabled=false;
 mask_enabled=false;
-mask=true(DYNMAT.Natoms,3);
+mask=DYNMAT.mask;
 
 % Reading of the optional argument
 if exist('varargin','var')
@@ -38,6 +40,7 @@ end
 if mask_enabled&&idx_enabled
     error('"idx" and "mask" arguments are mutually exclusive.')
 elseif idx_enabled
+    mask=mask*false;
     for p=idx
         mask(p,1:3)=true;
     end
