@@ -1,6 +1,6 @@
 function frames2gif(frames,filename,play_dir,delay_time)
 %==================================================================================================================================%
-% frames2gif.m: Convert an array of MatLab frames into a GIF (v0.3)
+% frames2gif.m: Convert an array of MatLab frames into a GIF (v0.3.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (28/08/2025) - Creation
@@ -9,6 +9,8 @@ function frames2gif(frames,filename,play_dir,delay_time)
 %       author: EYG             forward-backward-forward-forward for the infinite option)
 %   version 0.3 (26/11/2025) - Put back the option for the "Fwd", "Bwd" and "Round" play directions (and correction of the previous
 %       author: EYG             bug of the "Infinite" option). "Fwd" is now the default play direction.
+%   version 0.3.1 (25/11/2026) - Add a "loop" option to loop over all frames, then restart from the first.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   frames:     Array of frames
@@ -39,6 +41,10 @@ end
 if strcmpi(play_dir,'Infinite')
     gifcount=inf;
     list_idx=[linspace(2,length(frames),length(frames)-1) linspace(length(frames)-1,1,length(frames)-1)];
+    imwrite(img{1},c_map{1},[filename,'.gif'],'gif','LoopCount',gifcount,'DelayTime',delay_time)
+elseif strcmpi(play_dir,'loop')
+    gifcount=inf;
+    list_idx=1:length(frames);
     imwrite(img{1},c_map{1},[filename,'.gif'],'gif','LoopCount',gifcount,'DelayTime',delay_time)
 elseif strcmpi(play_dir,'round')
     gifcount=1;
