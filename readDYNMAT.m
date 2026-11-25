@@ -1,6 +1,6 @@
 function DYNMAT=readDYNMAT(filename)
 %==================================================================================================================================%
-% readPOSCAR.m: Read of a DYNMAT file from VASP and creation of a DYNMAT structure file in MatLab (v0.2)
+% readPOSCAR.m: Read of a DYNMAT file from VASP and creation of a DYNMAT structure file in MatLab (v0.2.0.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (12/10/2026) - Creation
@@ -11,6 +11,8 @@ function DYNMAT=readDYNMAT(filename)
 %       contrib: EYG
 %   version 0.2 (02/11/2026) - Add a "mask" field to the DYNMAT structure to easily find which DOF were processed. In addition, all
 %       author: EYG             variables are put into the DYNMAT structure at the very end of the script.
+%   version 0.2.0.1 (25/11/2026) - Bug fix, some variable were still assigned to the DYNMAT structure before the end of the script.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   filename:   path + name of the file to be read as a DYNMAT
@@ -41,7 +43,7 @@ masses=Data{1};
 Data=textscan(fid,'%d',2,'commentStyle','%');
 
 % Initialisation of the mask
-mask=false(DYNMAT.Natoms,3);
+mask=false(Natoms,3);
 
 % start reading finite-difference results
 p=0;
@@ -49,16 +51,16 @@ p=0;
 while ~isempty(Data{1})
     p=p+1;
     idx(p,:)=Data{1};
-    mask(idx(p,1),idx(p,2))
+    mask(idx(p,1),idx(p,2))=true;
     Data=textscan(fid,'%f',3,'commentStyle','%');
     dh{idx(p,1),idx(p,2)}=Data{1};
-    Data=textscan(fid,'%f',3*DYNMAT.Natoms,'commentStyle','%');
-    dF{idx(p,1),idx(p,2)}=reshape(Data{1},3,DYNMAT.Natoms)';
+    Data=textscan(fid,'%f',3*Natoms,'commentStyle','%');
+    dF{idx(p,1),idx(p,2)}=reshape(Data{1},3,Natoms)';
     Data=textscan(fid,'%d',2,'commentStyle','%');
 end
 fclose(fid);
 
-for p=1:DYNMAT.Natoms
+for p=1:Natoms
     for q=1:3
         if ~mask(p,q)
             dh{p,q}=NaN;
