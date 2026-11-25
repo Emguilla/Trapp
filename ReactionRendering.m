@@ -1,7 +1,7 @@
 function frames=ReactionRendering(R_in,aLim,bLim,cLim,varargin)
 %==================================================================================================================================%
 % ReactionRendering.m:  Render an animated or static 3D model of an atomic structure, with or without the corresponding energy 
-%                       profile (v0.4.2)
+%                       profile (v0.4.3)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (28/08/2025) - Creation
@@ -27,6 +27,8 @@ function frames=ReactionRendering(R_in,aLim,bLim,cLim,varargin)
 %   version 0.4.2 (08/09/2026) - Uniformisation of the number of significant digits in energy plots using the newly added 
 %       contrib: EYG                "uniform_digits_tick" function. In addition, there is an additional optional argument to decide
 %                                   whether the reaction coordinate values should be displayed.
+%   version 0.4.3 (25/11/2026) - Add an optional argument to display the figure in fullscreen.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   R_in:               Array of reaction structures (or POSCAR structures)
@@ -48,6 +50,8 @@ function frames=ReactionRendering(R_in,aLim,bLim,cLim,varargin)
 %                           (default: 0.05)
 %                       'x_axis_units', followed true or false to specify whether the reaction coordinates values should be shown.
 %                           (default: true)
+%                       'fullscreen', followed by true or false to specify whether the figure should be displayed fullscreen
+%                           (default: false)
 %==================================================================================================================================%
 
 % set default parameters
@@ -63,7 +67,7 @@ default_view_angle=[19.5 9];
 lattice_vec=NaN;
 ELim_set=false;
 delay_time=0.05;
-
+fullscreen=false;
 % Reading of the optional argument
 if exist('varargin','var')
     for p=1:2:length(varargin)
@@ -88,30 +92,32 @@ if exist('varargin','var')
                 delay_time=varargin{p+1};
             case 'x_axis_units'
                 x_axis_units=varargin{p+1};
+            case 'fullscreen'
+                fullscreen=varargin{p+1};
         end
     end
 end
-% check for consistency between x and E
+
+fig=figure;
+if save_data
+    fig.Color=[1 1 1];
+end
+if fullscreen
+    fig.WindowState='maximized';
+else
+    fig.Position=[200 120 1200 425];
+end
+
 if ~isfield(R_in,'POSCAR')
     POSCARs=R_in;
     EnergyProfile=false;
     n_images=length(POSCARs);
-    if save_data
-        figure('color','white')
-    else
-        figure;
-    end
 else
     POSCARs=R_in(end).CONTCAR;
     E0=R_in(1).energies(1,end);
     n_images=length(R_in(end).POSCAR);
     n_dataset=length(R_in)-1;
     % plot the static part of the energy profile only once at the beginning
-    if save_data
-        figure('Position', [200 120 1200 425],'color','white')
-    else
-        figure('Position', [200 120 1200 425])
-    end
     subplot(2,4,[3 4 7 8]);
     plot(R_in(1).reaction_coordinates(:,end)',R_in(1).energies(:,end)'-E0,'-','LineWidth',2)
     hold on
