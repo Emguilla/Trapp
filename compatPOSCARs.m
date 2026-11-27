@@ -19,7 +19,7 @@ if length(P1.Z)~=length(P2.Z)
     SIGERR=1;
     msg_err='POSCARs do not contain the same number of atoms.';
 else
-    if ~all(POSCAR.Z(1:end-1)==CONTCAR.Z)
+    if ~all(P1.Z==P2.Z)
         SIGERR=2;
         msg_err='POSCARs contain different types of atoms';
     end
