@@ -28,7 +28,7 @@ if exist('varargin','var')
 end
 
 % check compatibility between POSCAR structures
-[SIGERR,msg_err]=compatPOSCAR(D1.POSCAR,D2.POSCAR);
+[SIGERR,msg_err]=compatPOSCARs(D1.POSCAR,D2.POSCAR);
 if SIGERR~=0
     error(msg_err);
 end

@@ -26,7 +26,7 @@ ds_vec=P2.positions-P1.positions;
 ds_xred=P2.xred-P1.xred;
 
 % check compatibility between POSCAR structures
-[SIGERR,msg_err]=compatPOSCAR(P1,P2);
+[SIGERR,msg_err]=compatPOSCARs(P1,P2);
 if SIGERR~=0
     error(msg_err);
 end
