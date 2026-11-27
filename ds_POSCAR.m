@@ -1,6 +1,6 @@
 function [ds,ds_vec,ds_xred]=ds_POSCAR(P1,P2)
 %==================================================================================================================================%
-% ds_POSCAR.m:  Calculation of the distances between two configurations of the same system (v0.3)
+% ds_POSCAR.m:  Calculation of the distances between two configurations of the same system (v0.3.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (14/08/2025) - Creation
@@ -11,16 +11,26 @@ function [ds,ds_vec,ds_xred]=ds_POSCAR(P1,P2)
 %       contrib: EYG
 %   version 0.3 (02/09/2025) - change the update of ds_vec to account for non-orthorombic cells
 %       author: EYG
+%   version 0.3.1 (27/11/2026) - Add a check for compatibility between POSCAR structure using compatPOSCAR.m.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   P1, P2: POSCAR structures
 %==================================================================================================================================%
+
 % extraction of the cell geometry and cartesian coordinate of the atoms
 a=P1.vec(1,:);
 b=P1.vec(2,:);
 c=P1.vec(3,:);
 ds_vec=P2.positions-P1.positions;
 ds_xred=P2.xred-P1.xred;
+
+% check compatibility between POSCAR structures
+[SIGERR,msg_err]=compatPOSCAR(P1,P2);
+if SIGERR~=0
+    error(msg_err);
+end
+
 % since some atoms can "hop" through the boundary, the distance between the two p-ith atoms of P1 and P2 is determined as the
 % shortest distance possible accounting for the periodic copies of the atom from P2. /!\ The side-effect is that if the reaction
 % investigated involves an atom travelling across the whole cell, it could appear as not moving between P1 and P2 /!\
