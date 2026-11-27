@@ -47,7 +47,7 @@ end
 
 % Use D2 as a starting point, and fill out/replace finite-difference values everywhere 'D1.mask' is true
 DYNMAT=D2;
-for p=1:Natoms
+for p=1:DYNMAT.Natoms
     for q=1:3
         if D1.mask(p,q)
             DYNMAT.mask(p,q)=true;
