@@ -1,6 +1,6 @@
 function VIB=VIB_analysis(path)
 %==================================================================================================================================%
-% VIB_analysis.m: Data extraction and diagonalisation of the (multiple) phonon calculations (v0.4)
+% VIB_analysis.m: Data extraction and diagonalisation of the (multiple) phonon calculations (v0.4.1)
 %==================================================================================================================================%
 % Version history:
 %   version 0.1 (03/07/2026) - Creation
@@ -14,6 +14,8 @@ function VIB=VIB_analysis(path)
 %   version 0.4 (31/10/2026) - Rotor data is now loaded from the "Rotor" field of the VIB structure, instead of the "VibRotor.dat"
 %       author: EYG             file. The displacement associated with each phonon is then projected onto the rotational motion to
 %                               determine which frequency should be substituted by the free or hindered rotation frequency.
+%   version 0.4.1 (27/11/2026) - Add a condition to check the completeness of the phonon calculation in case some DOF are frozen.
+%       contrib: EYG
 %==================================================================================================================================%
 % args:
 %   path:   Location of the directory where the phonon calculation are located
@@ -62,6 +64,9 @@ for p=1:n_TS
     VIB(p).E=Energy(1);
     %Reading of the DYNMAT
     DYNMAT=readDYNMAT([path,ldir(p).name,'/DYNMAT']);
+    if ~all(DYNMAT.mask)
+        error('DYNMAT structure result from a calculation with frozen DOF!')
+    end
     Natoms=DYNMAT.Natoms;
     masses=DYNMAT.POSCAR.mass;
     Atomic=NaN(Natoms,Natoms);
